@@ -3,26 +3,26 @@ include ../config.mk
 .PHONY: build
 build: base-stmp service-base hail-ubuntu
 
-HAIL_UBUNTU_LATEST = gcr.io/$(PROJECT)/hail-ubuntu:latest
-HAIL_UBUNTU_IMAGE = gcr.io/$(PROJECT)/hail-ubuntu:$(shell docker images -q --no-trunc hail-ubuntu:latest | sed -e 's,[^:]*:,,')
+HAIL_UBUNTU_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/hail-ubuntu:latest
+HAIL_UBUNTU_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/hail-ubuntu:$(shell docker images -q --no-trunc hail-ubuntu:latest | sed -e 's,[^:]*:,,')
 
-BASE_LATEST = gcr.io/$(PROJECT)/base:latest
-BASE_IMAGE = gcr.io/$(PROJECT)/base:$(shell docker images -q --no-trunc base:latest | sed -e 's,[^:]*:,,')
+BASE_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/base:latest
+BASE_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/base:$(shell docker images -q --no-trunc base:latest | sed -e 's,[^:]*:,,')
 
-SERVICE_BASE_LATEST = gcr.io/$(PROJECT)/service-base:latest
-SERVICE_BASE_IMAGE = gcr.io/$(PROJECT)/service-base:$(shell docker images -q --no-trunc service-base:latest | sed -e 's,[^:]*:,,')
+SERVICE_BASE_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/service-base:latest
+SERVICE_BASE_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/service-base:$(shell docker images -q --no-trunc service-base:latest | sed -e 's,[^:]*:,,')
 
-HAIL_PUBLIC_LATEST = gcr.io/$(PROJECT)/hail-public:latest
-HAIL_PUBLIC_IMAGE = gcr.io/$(PROJECT)/hail-public:$(shell docker images -q --no-trunc hail-public:latest | sed -e 's,[^:]*:,,')
+HAIL_PUBLIC_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/hail-public:latest
+HAIL_PUBLIC_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/hail-public:$(shell docker images -q --no-trunc hail-public:latest | sed -e 's,[^:]*:,,')
 
-GENETICS_PUBLIC_LATEST = gcr.io/$(PROJECT)/genetics-public:latest
-GENETICS_PUBLIC_IMAGE = gcr.io/$(PROJECT)/genetics-public:$(shell docker images -q --no-trunc genetics-public:latest | sed -e 's,[^:]*:,,')
+GENETICS_PUBLIC_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/genetics-public:latest
+GENETICS_PUBLIC_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/genetics-public:$(shell docker images -q --no-trunc genetics-public:latest | sed -e 's,[^:]*:,,')
 
 .PHONY: hail-ubuntu
 hail-ubuntu: hail-ubuntu-stmp
 
 hail-ubuntu-stmp: hail-ubuntu/Dockerfile hail-ubuntu/hail-pip-install hail-ubuntu/pip.conf hail-ubuntu/hail-apt-get-install
-	-docker pull gcr.io/$(PROJECT)/ubuntu:bionic-20200921
+	-docker pull australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/ubuntu:bionic-20200921
 	-docker pull $(HAIL_UBUNTU_LATEST)
 	python3 ../ci/jinja2_render.py '{"global":{"project":"$(PROJECT)"}}' hail-ubuntu/Dockerfile hail-ubuntu/Dockerfile.out
 	docker build -t hail-ubuntu -f hail-ubuntu/Dockerfile.out --cache-from hail-ubuntu,$(HAIL_UBUNTU_LATEST),ubuntu:bionic-20200921 hail-ubuntu

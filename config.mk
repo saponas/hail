@@ -1,5 +1,5 @@
 PROJECT := hail-295901
-DOCKER_ROOT_IMAGE := gcr.io/$(PROJECT)/ubuntu:18.04
+DOCKER_ROOT_IMAGE := australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/ubuntu:18.04
 DOMAIN := hail.populationgenomics.org.au
 INTERNAL_IP := 10.152.0.2
 IP := 35.201.29.236
