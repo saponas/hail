@@ -207,7 +207,7 @@ resource "kubernetes_secret" "global_config" {
     batch_gcp_regions = var.batch_gcp_regions
     batch_logs_bucket = google_storage_bucket.batch_logs.name
     default_namespace = "default"
-    docker_root_image = "gcr.io/${var.gcp_project}/ubuntu:18.04"
+    docker_root_image = "australia-southeast1-docker.pkg.dev/${var.gcp_project}/hail/ubuntu:18.04"
     domain = var.domain
     gcp_project = var.gcp_project
     gcp_region = var.gcp_region
@@ -255,7 +255,7 @@ ssl-mode=VERIFY_CA
 END
     "sql-config.json" = <<END
 {
-    "docker_root_image": "gcr.io/${var.gcp_project}/ubuntu:18.04",
+    "docker_root_image": "australia-southeast1-docker.pkg.dev/${var.gcp_project}/hail/ubuntu:18.04",
     "host": "${google_sql_database_instance.db.ip_address[0].ip_address}",
     "port": 3306,
     "user": "root",
@@ -276,7 +276,7 @@ resource "google_container_registry" "registry" {
 
 resource "google_service_account" "gcr_pull" {
   account_id = "gcr-pull"
-  display_name = "pull from gcr.io"
+  display_name = "pull from australia-southeast1-docker.pkg.dev"
 }
 
 resource "google_service_account_key" "gcr_pull_key" {
@@ -285,7 +285,7 @@ resource "google_service_account_key" "gcr_pull_key" {
 
 resource "google_service_account" "gcr_push" {
   account_id = "gcr-push"
-  display_name = "push to gcr.io"
+  display_name = "push to australia-southeast1-docker.pkg.dev"
 }
 
 resource "google_service_account_key" "gcr_push_key" {

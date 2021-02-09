@@ -1,6 +1,6 @@
 include ../config.mk
 
-SERVICE_BASE_IMAGE = gcr.io/$(PROJECT)/service-base:$(shell docker images -q --no-trunc service-base:latest | sed -e 's,[^:]*:,,')
+SERVICE_BASE_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/service-base:$(shell docker images -q --no-trunc service-base:latest | sed -e 's,[^:]*:,,')
 
 .PHONY: deploy
 deploy:

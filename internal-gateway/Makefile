@@ -2,8 +2,8 @@ include ../config.mk
 
 .PHONY: build push deploy
 
-INTERNAL_GATEWAY_LATEST = gcr.io/$(PROJECT)/internal-gateway:latest
-INTERNAL_GATEWAY_IMAGE = gcr.io/$(PROJECT)/internal-gateway:$(shell docker images -q --no-trunc internal-gateway | sed -e 's,[^:]*:,,')
+INTERNAL_GATEWAY_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/internal-gateway:latest
+INTERNAL_GATEWAY_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/internal-gateway:$(shell docker images -q --no-trunc internal-gateway | sed -e 's,[^:]*:,,')
 
 build:
 	$(MAKE) -C ../docker hail-ubuntu

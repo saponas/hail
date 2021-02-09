@@ -152,7 +152,8 @@ You can now install Hail:
 - Bootstrap the cluster by running:
 
   ```
-  HAIL_CI_UTILS_IMAGE=gcr.io/<gcp-project>/ci-utils:latest \
+  HAIL_CI_UTILS_IMAGE=australia-southeast1-docker.pkg.
+  dev/<gcp-project>/hail/ci-utils:latest \
     HAIL_CI_BUCKET_NAME=dummy \
     KUBERNETES_SERVER_URL='<k8s-server-url>' \
     HAIL_DEFAULT_NAMESPACE='default' \
@@ -166,7 +167,8 @@ You can now install Hail:
 - Create the initial (developer) user:
 
   ```
-  HAIL_CI_UTILS_IMAGE=gcr.io/<gcp-project>/ci-utils:latest \
+  HAIL_CI_UTILS_IMAGE=australia-southeast1-docker.pkg.
+  dev/<gcp-project>/hail/ci-utils:latest \
     HAIL_CI_BUCKET_NAME=dummy \
     KUBERNETES_SERVER_URL='<k8s-server-url>' \
     HAIL_DEFAULT_NAMESPACE='default' \

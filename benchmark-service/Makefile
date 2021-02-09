@@ -1,7 +1,7 @@
 include ../config.mk
 
-BENCHMARK_LATEST = gcr.io/$(PROJECT)/benchmark:latest
-BENCHMARK_IMAGE = gcr.io/$(PROJECT)/benchmark:$(shell docker images -q --no-trunc benchmark:latest | sed -e 's,[^:]*:,,')
+BENCHMARK_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/benchmark:latest
+BENCHMARK_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/benchmark:$(shell docker images -q --no-trunc benchmark:latest | sed -e 's,[^:]*:,,')
 
 EXTRA_PYTHONPATH := ../hail/python:../gear:../web_common
 PYTHON := PYTHONPATH=$${PYTHONPATH:+$${PYTHONPATH}:}$(EXTRA_PYTHONPATH) python3

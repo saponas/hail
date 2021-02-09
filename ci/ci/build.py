@@ -235,9 +235,9 @@ class BuildImageStep(Step):
         self.publish_as = publish_as
         self.inputs = inputs
         if params.scope == 'deploy' and publish_as and not is_test_deployment:
-            self.base_image = f'gcr.io/{GCP_PROJECT}/{self.publish_as}'
+            self.base_image = f'australia-southeast1-docker.pkg.dev/{GCP_PROJECT}/hail/{self.publish_as}'
         else:
-            self.base_image = f'gcr.io/{GCP_PROJECT}/ci-intermediate'
+            self.base_image = f'australia-southeast1-docker.pkg.dev/{GCP_PROJECT}/hail/ci-intermediate'
         self.image = f'{self.base_image}:{self.token}'
         self.job = None
 
@@ -290,7 +290,7 @@ class BuildImageStep(Step):
         )
 
         if self.publish_as:
-            published_latest = shq(f'gcr.io/{GCP_PROJECT}/{self.publish_as}:latest')
+            published_latest = shq(f'australia-southeast1-docker.pkg.dev/{GCP_PROJECT}/hail/{self.publish_as}:latest')
             pull_published_latest = f'time retry docker pull {shq(published_latest)} || true'
             cache_from_published_latest = f'--cache-from {shq(published_latest)}'
         else:

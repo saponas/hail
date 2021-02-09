@@ -247,7 +247,7 @@ class Container:
 
         if repository in HAIL_GENETICS_IMAGES:
             repository_name_without_prefix = repository[len(HAIL_GENETICS):]
-            repository = f'gcr.io/{PROJECT}/{repository_name_without_prefix}'
+            repository = f'australia-southeast1-docker.pkg.dev/{PROJECT}/hail/{repository_name_without_prefix}'
 
         self.repository = repository
         self.tag = tag

@@ -1,4 +1,4 @@
-FROM gcr.io/{{ global.project }}/ubuntu:18.04
+FROM australia-southeast1-docker.pkg.dev/{{ global.project }}/hail/ubuntu:18.04
 
 ENV LANG C.UTF-8
 

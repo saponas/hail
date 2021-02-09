@@ -29,7 +29,7 @@ echo "Namespace: $DEFAULT_NAMESPACE; Home: $HOME"
 while true; do
     if curl -sSL "https://notebook$NOTEBOOK_BASE_PATH/images" > image-fetch-output.log 2>&1;
     then
-        for image in "gcr.io/$PROJECT/base:latest" \
+        for image in "australia-southeast1-docker.pkg.dev/$PROJECT/hail/base:latest" \
                          gcr.io/google.com/cloudsdktool/cloud-sdk:310.0.0-alpine \
                          $(cat image-fetch-output.log); do
             docker pull "$image" || true

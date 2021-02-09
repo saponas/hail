@@ -1,7 +1,7 @@
 include ../config.mk
 
-AUTH_LATEST = gcr.io/$(PROJECT)/auth:latest
-AUTH_IMAGE = gcr.io/$(PROJECT)/auth:$(shell docker images -q --no-trunc auth:latest | sed -e 's,[^:]*:,,')
+AUTH_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/auth:latest
+AUTH_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/auth:$(shell docker images -q --no-trunc auth:latest | sed -e 's,[^:]*:,,')
 
 EXTRA_PYTHONPATH := ../hail/python:../gear:../web_common
 PYTHON := PYTHONPATH=$${PYTHONPATH:+$${PYTHONPATH}:}$(EXTRA_PYTHONPATH) python3
