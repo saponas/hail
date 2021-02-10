@@ -39,6 +39,14 @@ provider "google" {
   zone = var.gcp_zone
 }
 
+provider "google-beta" {
+  credentials = file("~/.hail/terraform_sa_key.json")
+
+  project = var.gcp_project
+  region = var.gcp_region
+  zone = var.gcp_zone
+}
+
 data "google_client_config" "provider" {}
 
 resource "google_project_service" "service_networking" {
