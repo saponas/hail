@@ -20,11 +20,15 @@ variable "gcp_zone" {}
 variable "domain" {}
 variable "use_artifact_registry" { 
   type = bool
-  description = "If set to true, pull the base ubuntu images from Artifact Registry. Otherwise, assumes GCR" 
+  description = "pull the ubuntu image from Artifact Registry. Otherwise, GCR"
 }
 
 locals {
-  docker_root_image = var.use_artifact_registry ? "${var.gcp_region}-docker.pkg.dev/${var.gcp_project}/hail/ubuntu:18.04" : "gcr.io/${var.gcp_project}/ubuntu:18.04"
+  docker_root_image = (
+    var.use_artifact_registry ?
+    "${var.gcp_region}-docker.pkg.dev/${var.gcp_project}/hail/ubuntu:18.04" : 
+    "gcr.io/${var.gcp_project}/ubuntu:18.04"
+  )
 }
 
 provider "google" {
@@ -149,7 +153,10 @@ resource "random_id" "db_name_suffix" {
 }
 
 # Without this, I get:
-# Error: Error, failed to create instance because the network doesn't have at least 1 private services connection. Please see https://cloud.google.com/sql/docs/mysql/private-ip#network_requirements for how to create this connection.
+# Error: Error, failed to create instance because the network doesn't have at least 
+# 1 private services connection. Please see 
+# https://cloud.google.com/sql/docs/mysql/private-ip#network_requirements 
+# for how to create this connection.
 resource "google_compute_global_address" "google_managed_services_default" {
   name = "google-managed-services-default"
   purpose = "VPC_PEERING"
