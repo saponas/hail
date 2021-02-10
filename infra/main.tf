@@ -298,7 +298,7 @@ resource "google_artifact_registry_repository" "af_repository" {
 
 resource "google_service_account" "gcr_pull" {
   account_id = "gcr-pull"
-  display_name = "pull from gcr"
+  display_name = "pull from gcr.io"
 }
 
 resource "google_service_account_key" "gcr_pull_key" {
@@ -307,56 +307,56 @@ resource "google_service_account_key" "gcr_pull_key" {
 
 resource "google_service_account" "gcr_push" {
   account_id = "gcr-push"
-  display_name = "push to gcr"
+  display_name = "push to gcr.io"
 }
 
 resource "google_service_account_key" "gcr_push_key" {
   service_account_id = google_service_account.gcr_push.name
 }
 
-resource "google_storage_bucket_iam_member" "gcr_viewer" {
+resource "google_storage_bucket_iam_member" "gcr_pull_viewer" {
   bucket = google_container_registry.registry.id
   role = "roles/storage.objectViewer"
-  member = "serviceAccount:${google_service_account.gcr_pull.email}"
+  member = "serviceAccount:${google_service_account.gcr_pull_viewer.email}"
 }
 
 resource "google_artifact_registry_repository_iam_member" "artifact_registry_viewer" {
   provider = google-beta
   repository = google_artifact_registry_repository.af_repository.name
   role = "roles/artifactregistry.reader"
-  member = "serviceAccount:${google_service_account.gcr_pull.email}"
+  member = "serviceAccount:${google_service_account.gcr_pull_viewer.email}"
 }
 
-resource "google_storage_bucket_iam_member" "gcr_admin" {
+resource "google_storage_bucket_iam_member" "gcr_push_admin" {
   bucket = google_container_registry.registry.id
   role = "roles/storage.admin"
-  member = "serviceAccount:${google_service_account.gcr_push.email}"
+  member = "serviceAccount:${google_service_account.gcr_push_admin.email}"
 }
 
 resource "google_artifact_registry_repository_iam_member" "artifact_registry_admin" {
   provider = google-beta
   repository = google_artifact_registry_repository.af_repository.name
   role = "roles/artifactregistry.admin"
-  member = "serviceAccount:${google_service_account.gcr_push.email}"
+  member = "serviceAccount:${google_service_account.gcr_push_admin.email}"
 }
 
 resource "kubernetes_secret" "gcr_pull_key" {
   metadata {
-    name = "image-pull-key"
+    name = "gcr-pull-key"
   }
 
   data = {
-    "image-pull.json" = base64decode(google_service_account_key.gcr_pull_key.private_key)
+    "gcr-pull.json" = base64decode(google_service_account_key.gcr_pull_key.private_key)
   }
 }
 
 resource "kubernetes_secret" "gcr_push_key" {
   metadata {
-    name = "image-push-service-account-key"
+    name = "gcr-push-service-account-key"
   }
 
   data = {
-    "image-push-service-account-key.json" = base64decode(google_service_account_key.gcr_push_key.private_key)
+    "gcr-push-service-account-key.json" = base64decode(google_service_account_key.gcr_push_key.private_key)
   }
 }
 
