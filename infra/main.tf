@@ -18,6 +18,14 @@ variable "gcp_location" {}
 variable "gcp_region" {}
 variable "gcp_zone" {}
 variable "domain" {}
+variable "use_artifact_registry" { 
+  type = bool
+  description = "If set to true, pull the base ubuntu images from Artifact Registry. Otherwise, assumes GCR" 
+}
+
+locals {
+  docker_root_image = var.use_artifact_registry ? "${var.gcp_region}-docker.pkg.dev/${var.gcp_project}/hail/ubuntu:18.04" : "gcr.io/${var.gcp_project}/ubuntu:18.04"
+}
 
 provider "google" {
   credentials = file("~/.hail/terraform_sa_key.json")
@@ -207,7 +215,7 @@ resource "kubernetes_secret" "global_config" {
     batch_gcp_regions = var.batch_gcp_regions
     batch_logs_bucket = google_storage_bucket.batch_logs.name
     default_namespace = "default"
-    docker_root_image = "australia-southeast1-docker.pkg.dev/${var.gcp_project}/hail/ubuntu:18.04"
+    docker_root_image = local.docker_root_image
     domain = var.domain
     gcp_project = var.gcp_project
     gcp_region = var.gcp_region
@@ -255,7 +263,7 @@ ssl-mode=VERIFY_CA
 END
     "sql-config.json" = <<END
 {
-    "docker_root_image": "australia-southeast1-docker.pkg.dev/${var.gcp_project}/hail/ubuntu:18.04",
+    "docker_root_image": "${local.docker_root_image}",
     "host": "${google_sql_database_instance.db.ip_address[0].ip_address}",
     "port": 3306,
     "user": "root",
@@ -274,53 +282,74 @@ END
 resource "google_container_registry" "registry" {
 }
 
-resource "google_service_account" "gcr_pull" {
-  account_id = "gcr-pull"
-  display_name = "pull from australia-southeast1-docker.pkg.dev"
+resource "google_artifact_registry_repository" "af_repository" {
+  provider = google-beta
+  format = "DOCKER"
+  repository_id = "hail"
+  location = var.gcp_zone
 }
 
-resource "google_service_account_key" "gcr_pull_key" {
-  service_account_id = google_service_account.gcr_pull.name
+resource "google_service_account" "image_pull" {
+  account_id = "image-pull"
+  display_name = "pull image"
 }
 
-resource "google_service_account" "gcr_push" {
-  account_id = "gcr-push"
-  display_name = "push to australia-southeast1-docker.pkg.dev"
+resource "google_service_account_key" "image_pull_key" {
+  service_account_id = google_service_account.image_pull.name
 }
 
-resource "google_service_account_key" "gcr_push_key" {
-  service_account_id = google_service_account.gcr_push.name
+resource "google_service_account" "image_push" {
+  account_id = "image-push"
+  display_name = "push image"
 }
 
-resource "google_storage_bucket_iam_member" "gcr_pull_viewer" {
+resource "google_service_account_key" "image_push_key" {
+  service_account_id = google_service_account.image_push.name
+}
+
+resource "google_storage_bucket_iam_member" "gcr_viewer" {
   bucket = google_container_registry.registry.id
   role = "roles/storage.objectViewer"
-  member = "serviceAccount:${google_service_account.gcr_pull.email}"
+  member = "serviceAccount:${google_service_account.image_pull.email}"
 }
 
-resource "google_storage_bucket_iam_member" "gcr_push_admin" {
+resource "google_artifact_registry_repository_iam_member" "artifact_registry_viewer" {
+  provider = google-beta
+  repository = google_artifact_registry_repository.af_repository.name
+  role = "roles/artifactregistry.reader"
+  member = "serviceAccount:${google_service_account.image_pull.email}"
+}
+
+resource "google_storage_bucket_iam_member" "gcr_admin" {
   bucket = google_container_registry.registry.id
   role = "roles/storage.admin"
-  member = "serviceAccount:${google_service_account.gcr_push.email}"
+  member = "serviceAccount:${google_service_account.image_push.email}"
 }
 
-resource "kubernetes_secret" "gcr_pull_key" {
+resource "google_artifact_registry_repository_iam_member" "artifact_registry_admin" {
+  provider = google-beta
+  repository = google_artifact_registry_repository.af_repository.name
+  role = "roles/artifactregistry.admin"
+  member = "serviceAccount:${google_service_account.image_push.email}"
+}
+
+resource "kubernetes_secret" "image_pull_key" {
   metadata {
-    name = "gcr-pull-key"
+    name = "image-pull-key"
   }
 
   data = {
-    "gcr-pull.json" = base64decode(google_service_account_key.gcr_pull_key.private_key)
+    "image-pull.json" = base64decode(google_service_account_key.image_pull_key.private_key)
   }
 }
 
-resource "kubernetes_secret" "gcr_push_key" {
+resource "kubernetes_secret" "image_push_key" {
   metadata {
-    name = "gcr-push-service-account-key"
+    name = "image-push-service-account-key"
   }
 
   data = {
-    "gcr-push-service-account-key.json" = base64decode(google_service_account_key.gcr_push_key.private_key)
+    "image-push-service-account-key.json" = base64decode(google_service_account_key.image_push_key.private_key)
   }
 }
 
