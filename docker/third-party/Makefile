@@ -2,4 +2,4 @@ include ../../config.mk
 
 .PHONY: copy
 copy:
-	PROJECT=$(PROJECT) bash copy_images.sh
+	PROJECT=$(PROJECT) REGION=$(REGION) bash copy_images.sh

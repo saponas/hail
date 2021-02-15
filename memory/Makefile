@@ -3,8 +3,8 @@ include ../config.mk
 PYTHONPATH := $${PYTHONPATH:+$${PYTHONPATH}:}../hail/python:../gear
 PYTHON := PYTHONPATH=$(PYTHONPATH) python3
 
-MEMORY_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/memory:latest
-MEMORY_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/memory:$(shell docker images -q --no-trunc memory | sed -e 's,[^:]*:,,')
+MEMORY_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/memory:latest
+MEMORY_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/memory:$(shell docker images -q --no-trunc memory | sed -e 's,[^:]*:,,')
 
 .PHONY: check
 check:

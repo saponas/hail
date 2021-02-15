@@ -92,6 +92,7 @@ You can now install Hail:
   sudo snap install --classic kubectl
   sudo usermod -a -G docker $USER
   gcloud -q auth configure-docker
+  gcloud -q auth configure-docker $REGION-docker.pkg.dev
   gcloud container clusters get-credentials --zone <gcp-zone> vdc
   python3 -m pip install -r $HOME/hail/docker/requirements.txt
   ```
@@ -156,8 +157,7 @@ You can now install Hail:
 - Bootstrap the cluster by running:
 
   ```
-  HAIL_CI_UTILS_IMAGE=australia-southeast1-docker.pkg.
-  dev/<gcp-project>/hail/ci-utils:latest \
+  HAIL_CI_UTILS_IMAGE=<gcp-region>-docker.pkg.dev/<gcp-project>/hail/ci-utils:latest \
     HAIL_CI_BUCKET_NAME=dummy \
     KUBERNETES_SERVER_URL='<k8s-server-url>' \
     HAIL_DEFAULT_NAMESPACE='default' \
@@ -171,8 +171,7 @@ You can now install Hail:
 - Create the initial (developer) user:
 
   ```
-  HAIL_CI_UTILS_IMAGE=australia-southeast1-docker.pkg.
-  dev/<gcp-project>/hail/ci-utils:latest \
+  HAIL_CI_UTILS_IMAGE=<gcp-region>-docker.pkg.dev/<gcp-project>/hail/ci-utils:latest \
     HAIL_CI_BUCKET_NAME=dummy \
     KUBERNETES_SERVER_URL='<k8s-server-url>' \
     HAIL_DEFAULT_NAMESPACE='default' \

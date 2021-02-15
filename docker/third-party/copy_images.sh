@@ -12,7 +12,7 @@ fi
 
 for image in ${images}
 do
-    dest="australia-southeast1-docker.pkg.dev/${PROJECT}/hail/${image}"
+    dest="${REGION}-docker.pkg.dev/${PROJECT}/hail/${image}"
     docker pull $image
     docker tag $image $dest
     docker push $dest

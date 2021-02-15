@@ -1,7 +1,7 @@
 include ../config.mk
 
-ADDRESS_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/address:latest
-ADDRESS_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/address:$(shell docker images -q --no-trunc address | sed -e 's,[^:]*:,,')
+ADDRESS_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/address:latest
+ADDRESS_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/address:$(shell docker images -q --no-trunc address | sed -e 's,[^:]*:,,')
 
 PYTHONPATH := $${PYTHONPATH:+$${PYTHONPATH}:}../hail/python:../gear:../web_common
 PYTHON := PYTHONPATH=$(PYTHONPATH) python3

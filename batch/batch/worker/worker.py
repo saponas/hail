@@ -62,7 +62,8 @@ IP_ADDRESS = os.environ['IP_ADDRESS']
 BATCH_LOGS_BUCKET_NAME = os.environ['BATCH_LOGS_BUCKET_NAME']
 INSTANCE_ID = os.environ['INSTANCE_ID']
 PROJECT = os.environ['PROJECT']
-PUBLIC_GCR_IMAGES = public_gcr_images(PROJECT)
+REGION = os.environ['GCP_REGION']
+PUBLIC_GCR_IMAGES = public_gcr_images(PROJECT, REGION)
 WORKER_CONFIG = json.loads(base64.b64decode(os.environ['WORKER_CONFIG']).decode())
 MAX_IDLE_TIME_MSECS = int(os.environ['MAX_IDLE_TIME_MSECS'])
 WORKER_DATA_DISK_MOUNT = os.environ['WORKER_DATA_DISK_MOUNT']
@@ -247,7 +248,7 @@ class Container:
 
         if repository in HAIL_GENETICS_IMAGES:
             repository_name_without_prefix = repository[len(HAIL_GENETICS):]
-            repository = f'australia-southeast1-docker.pkg.dev/{PROJECT}/hail/{repository_name_without_prefix}'
+            repository = f'{REGION}-docker.pkg.dev/{PROJECT}/hail/{repository_name_without_prefix}'
 
         self.repository = repository
         self.tag = tag

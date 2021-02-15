@@ -1,4 +1,4 @@
-FROM australia-southeast1-docker.pkg.dev/{{ global.project }}/hail/ubuntu:20.04
+FROM {{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/ubuntu:20.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \

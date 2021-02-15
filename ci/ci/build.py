@@ -10,6 +10,7 @@ from hailtop.utils import RETRY_FUNCTION_SCRIPT, flatten
 from .utils import generate_token
 from .environment import (
     GCP_PROJECT,
+    GCP_REGION,
     GCP_ZONE,
     DOMAIN,
     IP,
@@ -235,9 +236,9 @@ class BuildImageStep(Step):
         self.publish_as = publish_as
         self.inputs = inputs
         if params.scope == 'deploy' and publish_as and not is_test_deployment:
-            self.base_image = f'australia-southeast1-docker.pkg.dev/{GCP_PROJECT}/hail/{self.publish_as}'
+            self.base_image = f'{GCP_REGION}-docker.pkg.dev/{GCP_PROJECT}/hail/{self.publish_as}'
         else:
-            self.base_image = f'australia-southeast1-docker.pkg.dev/{GCP_PROJECT}/hail/ci-intermediate'
+            self.base_image = f'{GCP_REGION}-docker.pkg.dev/{GCP_PROJECT}/hail/ci-intermediate'
         self.image = f'{self.base_image}:{self.token}'
         self.job = None
 
@@ -290,7 +291,7 @@ class BuildImageStep(Step):
         )
 
         if self.publish_as:
-            published_latest = shq(f'australia-southeast1-docker.pkg.dev/{GCP_PROJECT}/hail/{self.publish_as}:latest')
+            published_latest = shq(f'{GCP_REGION}-docker.pkg.dev/{GCP_PROJECT}/hail/{self.publish_as}:latest')
             pull_published_latest = f'time retry docker pull {shq(published_latest)} || true'
             cache_from_published_latest = f'--cache-from {shq(published_latest)}'
         else:
@@ -338,7 +339,8 @@ FROM_IMAGE=$(awk '$1 == "FROM" {{ print $2; exit }}' {shq(rendered_dockerfile)})
 
 time gcloud -q auth activate-service-account \
   --key-file=/secrets/gcr-push-service-account-key/gcr-push-service-account-key.json
-time gcloud -q auth configure-docker
+time gcloud -q auth configure-docker gcr.io
+time gcloud -q auth configure-docker {GCP_REGION}-docker.pkg.dev
 
 time retry docker pull $FROM_IMAGE
 {pull_published_latest}

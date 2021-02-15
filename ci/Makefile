@@ -1,10 +1,10 @@
 include ../config.mk
 
-CI_UTILS_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/ci-utils:latest
-CI_UTILS_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/ci-utils:$(shell docker images -q --no-trunc ci-utils | sed -e 's,[^:]*:,,')
+CI_UTILS_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/ci-utils:latest
+CI_UTILS_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/ci-utils:$(shell docker images -q --no-trunc ci-utils | sed -e 's,[^:]*:,,')
 
-CI_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/ci:latest
-CI_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/ci:$(shell docker images -q --no-trunc ci | sed -e 's,[^:]*:,,')
+CI_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/ci:latest
+CI_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/ci:$(shell docker images -q --no-trunc ci | sed -e 's,[^:]*:,,')
 
 EXTRA_PYTHONPATH := ../batch:../hail/python:../gear:../web_common
 PYTHON := PYTHONPATH=$${PYTHONPATH:+$${PYTHONPATH}:}$(EXTRA_PYTHONPATH) python3

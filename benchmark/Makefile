@@ -29,7 +29,7 @@ cleanup_image:
 	rm -f pushed_image
 
 BENCHMARK_DOCKER_TAG := benchmark_$(shell whoami)
-BENCHMARK_REPO_BASE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/$(BENCHMARK_DOCKER_TAG)
+BENCHMARK_REPO_BASE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/$(BENCHMARK_DOCKER_TAG)
 
 ifndef HAIL_WHEEL
 image_sha:

@@ -1,10 +1,10 @@
 include ../config.mk
 
-BATCH_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/batch:latest
-BATCH_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/batch:$(shell docker images -q --no-trunc batch | sed -e 's,[^:]*:,,')
+BATCH_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/batch:latest
+BATCH_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/batch:$(shell docker images -q --no-trunc batch | sed -e 's,[^:]*:,,')
 
-BATCH_WORKER_LATEST = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/batch-worker:latest
-BATCH_WORKER_IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/batch-worker:$(shell docker images -q --no-trunc batch-worker | sed -e 's,[^:]*:,,')
+BATCH_WORKER_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/batch-worker:latest
+BATCH_WORKER_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/batch-worker:$(shell docker images -q --no-trunc batch-worker | sed -e 's,[^:]*:,,')
 
 EXTRA_PYTHONPATH := ../hail/python:../gear:../web_common
 PYTHON := PYTHONPATH=$${PYTHONPATH:+$${PYTHONPATH}:}$(EXTRA_PYTHONPATH) python3

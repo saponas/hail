@@ -2,7 +2,7 @@ include ../config.mk
 
 .PHONY: deployment.yaml build push deploy clean test render render-hail-too watch watch-hail-too
 
-IMAGE = australia-southeast1-docker.pkg.dev/$(PROJECT)/hail/site:$(shell docker images -q --no-trunc site | sed -e 's,[^:]*:,,')
+IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/site:$(shell docker images -q --no-trunc site | sed -e 's,[^:]*:,,')
 RENDER_COMMAND := PYTHONPATH=$$PYTHONPATH:../web_common:../gear python3 render.py
 
 render:
