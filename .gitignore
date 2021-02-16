@@ -28,4 +28,3 @@ hail/prebuilt/lib/darwin/libboot.dylib
 hail/prebuilt/lib/darwin/libhail.dylib
 query/hail.jar
 infra/.terraform.lock.hcl
-vlad/
