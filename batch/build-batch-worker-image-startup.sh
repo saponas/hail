@@ -29,7 +29,7 @@ rm -rf /var/lib/apt/lists/*
 
 [ -f /etc/docker/daemon.json ] || echo "{}" > /etc/docker/daemon.json
 
-VERSION=1.5.0
+VERSION=2.0.4
 OS=linux
 ARCH=amd64
 
@@ -42,10 +42,10 @@ export HOME=/root
 
 GCP_PROJECT=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/project/project-id")
 GCP_ZONE=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/zone")
-GCP_REGION="$(echo ${GCP_ZONE} | sed 's/-.$//')"
+GCP_ZONE=${GCP_ZONE##*/}
+GCP_REGION=${GCP_ZONE%-*}
 
-docker-credential-gcr configure-docker
-gcloud auth configure-docker ${GCP_REGION}-docker.pkg.dev
+docker-credential-gcr configure-docker --include-artifact-registry
 
 docker pull ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/hail/ubuntu:18.04
 docker pull gcr.io/google.com/cloudsdktool/cloud-sdk:310.0.0-alpine
