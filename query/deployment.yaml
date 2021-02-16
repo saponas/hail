@@ -10,6 +10,7 @@ spec:
     matchLabels:
       app: query
   replicas: 1
+  terminationGracePeriodSeconds: 28800  # 8 hours
   template:
     metadata:
       labels:
