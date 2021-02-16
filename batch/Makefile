@@ -1,10 +1,10 @@
 include ../config.mk
 
-BATCH_LATEST = gcr.io/$(PROJECT)/batch:latest
-BATCH_IMAGE = gcr.io/$(PROJECT)/batch:$(shell docker images -q --no-trunc batch | sed -e 's,[^:]*:,,')
+BATCH_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/batch:latest
+BATCH_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/batch:$(shell docker images -q --no-trunc batch | sed -e 's,[^:]*:,,')
 
-BATCH_WORKER_LATEST = gcr.io/$(PROJECT)/batch-worker:latest
-BATCH_WORKER_IMAGE = gcr.io/$(PROJECT)/batch-worker:$(shell docker images -q --no-trunc batch-worker | sed -e 's,[^:]*:,,')
+BATCH_WORKER_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/batch-worker:latest
+BATCH_WORKER_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/batch-worker:$(shell docker images -q --no-trunc batch-worker | sed -e 's,[^:]*:,,')
 
 EXTRA_PYTHONPATH := ../hail/python:../gear:../web_common
 PYTHON := PYTHONPATH=$${PYTHONPATH:+$${PYTHONPATH}:}$(EXTRA_PYTHONPATH) python3

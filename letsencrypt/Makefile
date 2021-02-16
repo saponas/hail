@@ -1,7 +1,7 @@
 include ../config.mk
 
-LETSENCRYPT_LATEST = gcr.io/$(PROJECT)/letsencrypt:latest
-LETSENCRYPT_IMAGE = gcr.io/$(PROJECT)/letsencrypt:$(shell docker images -q --no-trunc letsencrypt | sed -e 's,[^:]*:,,')
+LETSENCRYPT_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/letsencrypt:latest
+LETSENCRYPT_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/letsencrypt:$(shell docker images -q --no-trunc letsencrypt | sed -e 's,[^:]*:,,')
 
 .PHONY: build push start-service run clean
 

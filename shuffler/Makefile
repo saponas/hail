@@ -1,7 +1,7 @@
 include ../config.mk
 
-SHUFFLER_LATEST = gcr.io/$(PROJECT)/shuffler:latest
-SHUFFLER_IMAGE = gcr.io/$(PROJECT)/shuffler:$(shell docker images -q --no-trunc shuffler | sed -e 's,[^:]*:,,')
+SHUFFLER_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/shuffler:latest
+SHUFFLER_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/shuffler:$(shell docker images -q --no-trunc shuffler | sed -e 's,[^:]*:,,')
 
 PYTHONPATH := $${PYTHONPATH:+$${PYTHONPATH}:}../hail/python:../gear:../web_common
 PYTHON := PYTHONPATH=$(PYTHONPATH) python3
