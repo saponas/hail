@@ -13,5 +13,6 @@ ENV PATH $PATH:/root/google-cloud-sdk/bin
 
 ADD fetch-image.sh ./
 ENV PROJECT {{ global.project }}
+ENV REGION {{ global.region }}
 
 CMD /bin/sh fetch-image.sh
