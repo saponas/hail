@@ -1,7 +1,7 @@
 include ../config.mk
 
-NOTEBOOK_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/notebook:latest
-NOTEBOOK_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/notebook:$(shell docker images -q --no-trunc notebook | sed -e 's,[^:]*:,,')
+NOTEBOOK_LATEST = $(DOCKER_PREFIX)/notebook:latest
+NOTEBOOK_IMAGE = $(DOCKER_PREFIX)/notebook:$(shell docker images -q --no-trunc notebook | sed -e 's,[^:]*:,,')
 
 EXTRA_PYTHONPATH := ../hail/python:../gear:../web_common
 PYTHON := PYTHONPATH=$${PYTHONPATH:+$${PYTHONPATH}:}$(EXTRA_PYTHONPATH) python3

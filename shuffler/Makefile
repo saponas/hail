@@ -1,7 +1,7 @@
 include ../config.mk
 
-SHUFFLER_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/shuffler:latest
-SHUFFLER_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/shuffler:$(shell docker images -q --no-trunc shuffler | sed -e 's,[^:]*:,,')
+SHUFFLER_LATEST = $(DOCKER_PREFIX)/shuffler:latest
+SHUFFLER_IMAGE = $(DOCKER_PREFIX)/shuffler:$(shell docker images -q --no-trunc shuffler | sed -e 's,[^:]*:,,')
 
 PYTHONPATH := $${PYTHONPATH:+$${PYTHONPATH}:}../hail/python:../gear:../web_common
 PYTHON := PYTHONPATH=$(PYTHONPATH) python3

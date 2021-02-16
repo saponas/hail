@@ -1,7 +1,7 @@
 include ../config.mk
 
-BENCHMARK_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/benchmark:latest
-BENCHMARK_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/benchmark:$(shell docker images -q --no-trunc benchmark:latest | sed -e 's,[^:]*:,,')
+BENCHMARK_LATEST = $(DOCKER_PREFIX)/benchmark:latest
+BENCHMARK_IMAGE = $(DOCKER_PREFIX)/benchmark:$(shell docker images -q --no-trunc benchmark:latest | sed -e 's,[^:]*:,,')
 
 EXTRA_PYTHONPATH := ../hail/python:../gear:../web_common
 PYTHON := PYTHONPATH=$${PYTHONPATH:+$${PYTHONPATH}:}$(EXTRA_PYTHONPATH) python3

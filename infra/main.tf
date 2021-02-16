@@ -551,6 +551,14 @@ resource "google_service_account" "ci" {
   account_id = "ci-${random_id.ci_name_suffix.hex}"
 }
 
+resource "google_artifact_registry_repository_iam_member" "artifact_registry_viewer" {
+  provider = google-beta
+  repository = google_artifact_registry_repository.repository.name
+  location = var.gcp_location
+  role = "roles/artifactregistry.reader"
+  member = "serviceAccount:${google_service_account.ci.email}"
+}
+
 resource "google_service_account_key" "ci_key" {
   service_account_id = google_service_account.ci.name
 }

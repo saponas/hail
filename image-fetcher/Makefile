@@ -2,14 +2,14 @@ include ../config.mk
 
 .PHONY: build push deploy
 
-FETCH_LATEST = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/image-fetcher:latest
-FETCH_IMAGE = $(REGION)-docker.pkg.dev/$(PROJECT)/hail/image-fetcher:$(shell docker images -q --no-trunc image-fetcher | sed -e 's,[^:]*:,,')
+FETCH_LATEST = $(DOCKER_PREFIX)/image-fetcher:latest
+FETCH_IMAGE = $(DOCKER_PREFIX)/image-fetcher:$(shell docker images -q --no-trunc image-fetcher | sed -e 's,[^:]*:,,')
 
 build: fetch-image.sh
-	docker pull $(REGION)-docker.pkg.dev/$(PROJECT)/hail/alpine:3.8
+	docker pull $(DOCKER_PREFIX)/alpine:3.8
 	-docker pull $(FETCH_LATEST)
 	python3 ../ci/jinja2_render.py '{"global":{"project":"$(PROJECT)","region":"$(REGION)"}}' Dockerfile Dockerfile.out
-	docker build -f Dockerfile.out . -t image-fetcher --cache-from image-fetcher,$(FETCH_LATEST),$(REGION)-docker.pkg.dev/$(PROJECT)/hail/alpine:3.8
+	docker build -f Dockerfile.out . -t image-fetcher --cache-from image-fetcher,$(FETCH_LATEST),$(DOCKER_PREFIX)/alpine:3.8
 
 push: build
 	docker tag image-fetcher $(FETCH_LATEST)

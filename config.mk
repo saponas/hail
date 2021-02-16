@@ -1,7 +1,8 @@
 PROJECT := hail-295901
 REGION := australia-southeast1
 ZONE := australia-southeast1-b
-DOCKER_ROOT_IMAGE := $(REGION)-docker.pkg.dev/$(PROJECT)/hail/ubuntu:18.04
+DOCKER_PREFIX := $(REGION)-docker.pkg.dev/$(PROJECT)/hail
+DOCKER_ROOT_IMAGE := $(DOCKER_PREFIX)/ubuntu:18.04
 DOMAIN := hail.populationgenomics.org.au
 INTERNAL_IP := 10.152.0.2
 IP := 35.201.29.236
