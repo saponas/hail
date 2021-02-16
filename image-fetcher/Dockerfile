@@ -1,4 +1,4 @@
-FROM gcr.io/{{ global.project }}/alpine:3.8
+FROM {{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/alpine:3.8
 MAINTAINER hail-team@broadinstitute.org
 
 RUN apk --no-cache add \
