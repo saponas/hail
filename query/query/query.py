@@ -4,6 +4,7 @@ import base64
 import concurrent
 import logging
 import uvloop
+from weakref import WeakSet
 import asyncio
 from aiohttp import web
 import kubernetes_asyncio as kube
@@ -20,6 +21,12 @@ DEFAULT_NAMESPACE = os.environ['HAIL_DEFAULT_NAMESPACE']
 log = logging.getLogger('batch')
 routes = web.RouteTableDef()
 
+def add_connection_to_weakref_set(request):
+    # potential modification of connection object
+    request.app['connections'].add(request)
+
+def remove_connection_from_weakref_set(request):
+    request.app['connections'].discard(request)
 
 def java_to_web_response(jresp):
     status = jresp.status()
@@ -100,6 +107,8 @@ def blocking_get_reference(jbackend, userdata, body):   # pylint: disable=unused
 async def handle_ws_response(request, userdata, endpoint, f):
     app = request.app
     jbackend = app['jbackend']
+    # track connections for graceful shut down
+    add_connection_to_weakref_set(request)
 
     await add_user(app, userdata)
     log.info(f'{endpoint}: connecting websocket')
@@ -122,6 +131,7 @@ async def handle_ws_response(request, userdata, endpoint, f):
             task.cancel()
             log.info(f'{endpoint}: Task has been cancelled due to websocket closure.')
         log.info(f'{endpoint}: websocket connection closed')
+        remove_connection_from_weakref_set(request)
 
 
 @routes.get('/api/v1alpha/execute')
@@ -196,6 +206,21 @@ async def set_flag(request, userdata):  # pylint: disable=unused-argument
     return java_to_web_response(jresp)
 
 
+# Test method, for testing "waiting tasks"
+@routes.get('/api/wait/')
+async def wait_seconds(request, duration):
+    add_connection_to_weakref_set(request)
+
+    if not isinstance(duration, (int, float)):
+        return web.json_response({
+            'error': f'Expected duration to be an int, got {type(duration)}',
+        }, status=422)
+
+    await asyncio.sleep(int(duration))
+    remove_connection_from_weakref_set(request)
+    return web.json_response({"d": f"You waited '{duration}' seconds!"})
+
+
 async def on_startup(app):
     thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=16)
     app['thread_pool'] = thread_pool
@@ -223,10 +248,31 @@ async def on_startup(app):
     k8s_client = kube.client.CoreV1Api()
     app['k8s_client'] = k8s_client
 
+    # store connections, so we can wait for them to finish on graceful shutdown
+    app['connections'] = WeakSet()
+
 
 async def on_cleanup(app):
     del app['k8s_client']
     await asyncio.gather(*(t for t in asyncio.all_tasks() if t is not asyncio.current_task()))
+
+
+async def wait_for_all_connections(app):
+    connections = app['connections']
+    if len(connections) > 0:
+        log.info(f'Query service is closing, waiting for {len(connections)} connections to close')
+        loop_counter = 0
+        while len(connections) > 0:
+            loop_counter += 1
+            if loop_counter % 300 == 0:
+                # 5 minutes
+                log.info(f'Still waiting for {len(connections)} connections to close')
+            await asyncio.sleep(1)
+        log.info("All connections have been closed, query service is shutting down")
+    else:
+        log.info("Query service is shutting down with no open connections to wait for")
+
+    return True
 
 
 def run():
@@ -238,6 +284,7 @@ def run():
 
     app.on_startup.append(on_startup)
     app.on_cleanup.append(on_cleanup)
+    app.on_shutdown.append(wait_for_all_connections)
 
     deploy_config = get_deploy_config()
     web.run_app(
