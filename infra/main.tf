@@ -328,12 +328,20 @@ resource "google_storage_bucket_iam_member" "gcr_pull_viewer" {
   member = "serviceAccount:${google_service_account.gcr_pull.email}"
 }
 
-resource "google_artifact_registry_repository_iam_member" "artifact_registry_viewer" {
+resource "google_artifact_registry_repository_iam_member" "artifact_registry_pull_viewer" {
   provider = google-beta
   repository = google_artifact_registry_repository.repository.name
   location = var.gcp_location
   role = "roles/artifactregistry.reader"
   member = "serviceAccount:${google_service_account.gcr_pull.email}"
+}
+
+resource "google_artifact_registry_repository_iam_member" "artifact_registry_ci_viewer" {
+  provider = google-beta
+  repository = google_artifact_registry_repository.repository.name
+  location = var.gcp_location
+  role = "roles/artifactregistry.reader"
+  member = "serviceAccount:${google_service_account.ci.email}"
 }
 
 resource "google_storage_bucket_iam_member" "gcr_push_admin" {
@@ -342,7 +350,7 @@ resource "google_storage_bucket_iam_member" "gcr_push_admin" {
   member = "serviceAccount:${google_service_account.gcr_push.email}"
 }
 
-resource "google_artifact_registry_repository_iam_member" "artifact_registry_admin" {
+resource "google_artifact_registry_repository_iam_member" "artifact_registry_push_admin" {
   provider = google-beta
   repository = google_artifact_registry_repository.repository.name
   location = var.gcp_location
