@@ -168,6 +168,7 @@ class Step(abc.ABC):
         config['global'] = {
             'project': GCP_PROJECT,
             'zone': GCP_ZONE,
+            'region': GCP_REGION,
             'domain': DOMAIN,
             'ip': IP,
             'k8s_server_url': KUBERNETES_SERVER_URL,
