@@ -40,14 +40,11 @@ curl -fsSL "https://github.com/GoogleCloudPlatform/docker-credential-gcr/release
 # avoid "unable to get current user home directory: os/user lookup failed"
 export HOME=/root
 
-GCP_PROJECT=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/project/project-id")
-GCP_ZONE=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/zone")
-GCP_ZONE=${GCP_ZONE##*/}
-GCP_REGION=${GCP_ZONE%-*}
+DOCKER_PREFIX=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/attributes/docker_prefix")
 
 docker-credential-gcr configure-docker --include-artifact-registry
 
-docker pull ${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/hail/ubuntu:18.04
+docker pull ${DOCKER_PREFIX}/ubuntu:18.04
 docker pull gcr.io/google.com/cloudsdktool/cloud-sdk:310.0.0-alpine
 
 # add docker daemon debug logging
