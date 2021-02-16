@@ -24,11 +24,12 @@ variable "use_artifact_registry" {
 }
 
 locals {
-  docker_root_image = (
+  docker_prefix = (
     var.use_artifact_registry ?
-    "${var.gcp_region}-docker.pkg.dev/${var.gcp_project}/hail/ubuntu:18.04" : 
-    "gcr.io/${var.gcp_project}/ubuntu:18.04"
+    "${var.gcp_region}-docker.pkg.dev/${var.gcp_project}/hail" : 
+    "gcr.io/${var.gcp_project}"
   )
+  docker_root_image = "${local.docker_prefix}/ubuntu:18.04"
 }
 
 provider "google" {
@@ -235,6 +236,7 @@ resource "kubernetes_secret" "global_config" {
     gcp_project = var.gcp_project
     gcp_region = var.gcp_region
     gcp_zone = var.gcp_zone
+    docker_prefix = local.docker_prefix
     gsuite_organization = var.gsuite_organization
     internal_ip = google_compute_address.internal_gateway.address
     ip = google_compute_address.gateway.address

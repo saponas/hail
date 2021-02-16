@@ -16,7 +16,7 @@ Instructions:
   service account key and place it in
   `$HOME/.hail/terraform_sa_key.json`.
 
-- Enable the the GCP services needed by Hail:
+- Enable the GCP services needed by Hail:
 
    ```
    gcloud services enable \
@@ -51,7 +51,6 @@ Instructions:
    # If set to true, pull the base ubuntu image from Artifact Registry.
    # Otherwise, assumes GCR.
    use_artifact_registry = true
-
    ```
 
 - Run `terraform init`.
@@ -157,13 +156,16 @@ You can now install Hail:
 - Bootstrap the cluster by running:
 
   ```
-  HAIL_CI_UTILS_IMAGE=<gcp-region>-docker.pkg.dev/<gcp-project>/hail/ci-utils:latest \
+  DOCKER_PREFIX=gcr.io/<gcp-project>
+  
+  HAIL_CI_UTILS_IMAGE=$DOCKER_PREFIX/ci-utils:latest \
     HAIL_CI_BUCKET_NAME=dummy \
     KUBERNETES_SERVER_URL='<k8s-server-url>' \
     HAIL_DEFAULT_NAMESPACE='default' \
     HAIL_DOMAIN=<domain> \
     HAIL_GCP_ZONE=<gcp-zone> \
     HAIL_GCP_PROJECT=<gcp-project> \
+    DOCKER_PREFIX=$DOCKER_PREFIX \
     PYTHONPATH=$HOME/hail/ci:$HOME/hail/batch:$HOME/hail/hail/python \
     python3 $HAIL/ci/bootstrap.py hail-is/hail:main $(git rev-parse HEAD) test_batch_0
   ```
@@ -171,13 +173,16 @@ You can now install Hail:
 - Create the initial (developer) user:
 
   ```
-  HAIL_CI_UTILS_IMAGE=<gcp-region>-docker.pkg.dev/<gcp-project>/hail/ci-utils:latest \
+  DOCKER_PREFIX=gcr.io/<gcp-project>
+
+  HAIL_CI_UTILS_IMAGE=$DOCKER_PREFIX/ci-utils:latest \
     HAIL_CI_BUCKET_NAME=dummy \
     KUBERNETES_SERVER_URL='<k8s-server-url>' \
     HAIL_DEFAULT_NAMESPACE='default' \
     HAIL_DOMAIN=<domain> \
     HAIL_GCP_ZONE=<gcp-zone> \
     HAIL_GCP_PROJECT=<gcp-project> \
+    DOCKER_PREFIX=$DOCKER_PREFIX \
     PYTHONPATH=$HOME/hail/ci:$HOME/hail/batch:$HOME/hail/hail/python \
     python3 $HAIL/ci/bootstrap.py --extra-code-config '{"username":"<username>","email":"<email>"}' hail-is/hail:main $(git rev-parse HEAD) create_initial_user
   ```

@@ -5,6 +5,6 @@ do
     sed "s/@PYTHON_VERSION@/$version/g" Dockerfile > Dockerfile.out
     docker build --tag hailgenetics/python-dill:$version - <Dockerfile.out
     docker push hailgenetics/python-dill:$version
-    docker tag hailgenetics/python-dill:$version $REGION-docker.pkg.dev/$PROJECT/hail/python-dill:$version
-    docker push $REGION-docker.pkg.dev/$PROJECT/hail/python-dill:$version
+    docker tag hailgenetics/python-dill:$version ${DOCKER_PREFIX}/python-dill:$version
+    docker push ${DOCKER_PREFIX}/python-dill:$version
 done

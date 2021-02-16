@@ -10,8 +10,8 @@ from hailtop.utils import RETRY_FUNCTION_SCRIPT, flatten
 from .utils import generate_token
 from .environment import (
     GCP_PROJECT,
-    GCP_REGION,
     GCP_ZONE,
+    DOCKER_PREFIX,
     DOMAIN,
     IP,
     CI_UTILS_IMAGE,
@@ -168,7 +168,7 @@ class Step(abc.ABC):
         config['global'] = {
             'project': GCP_PROJECT,
             'zone': GCP_ZONE,
-            'region': GCP_REGION,
+            'docker_prefix': DOCKER_PREFIX,
             'domain': DOMAIN,
             'ip': IP,
             'k8s_server_url': KUBERNETES_SERVER_URL,

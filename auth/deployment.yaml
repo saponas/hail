@@ -44,8 +44,6 @@ spec:
             value: "{{ global.domain }}"
           - name: PROJECT
             value: "{{ global.project }}"
-          - name: REGION
-            value: "{{ global.region }}"
           - name: ZONE
             value: "{{ global.zone }}"
           - name: HAIL_DEFAULT_NAMESPACE
@@ -156,8 +154,6 @@ spec:
             value: "{{ global.domain }}"
           - name: PROJECT
             value: "{{ global.project }}"
-          - name: REGION
-            value: "{{ global.region }}"
           - name: ZONE
             value: "{{ global.zone }}"
           - name: HAIL_DEFAULT_NAMESPACE

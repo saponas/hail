@@ -1,4 +1,4 @@
-FROM {{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/ubuntu:18.04
+FROM {{ global.docker_prefix }}/ubuntu:18.04
 
 ENV LANG C.UTF-8
 

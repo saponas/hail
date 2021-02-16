@@ -8,7 +8,7 @@ FETCH_IMAGE = $(DOCKER_PREFIX)/image-fetcher:$(shell docker images -q --no-trunc
 build: fetch-image.sh
 	docker pull $(DOCKER_PREFIX)/alpine:3.8
 	-docker pull $(FETCH_LATEST)
-	python3 ../ci/jinja2_render.py '{"global":{"project":"$(PROJECT)","region":"$(REGION)"}}' Dockerfile Dockerfile.out
+	python3 ../ci/jinja2_render.py '{"global":{"docker_prefix":"$(DOCKER_PREFIX)"}}' Dockerfile Dockerfile.out
 	docker build -f Dockerfile.out . -t image-fetcher --cache-from image-fetcher,$(FETCH_LATEST),$(DOCKER_PREFIX)/alpine:3.8
 
 push: build
