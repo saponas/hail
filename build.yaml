@@ -502,6 +502,11 @@ steps:
    dependsOn:
      - service_base_image
  - kind: buildImage
+   name: batch_worker_image
+   dockerFile: batch/Dockerfile.worker
+   contextPath: .
+   publishAs: batch-worker
+ - kind: buildImage
    name: test_ci_image
    dockerFile: ci/Dockerfile.test
    contextPath: .
@@ -650,17 +655,6 @@ steps:
      time retry make jars python-version-info wheel
    dependsOn:
      - hail_build_image
- - kind: buildImage
-   name: batch_worker_image
-   dockerFile: batch/Dockerfile.worker
-   contextPath: .
-   publishAs: batch-worker
-   inputs:
-     - from: /just-jar/hail.jar
-       to: /batch/hail.jar
-   dependsOn:
-     - service_base_image
-     - build_hail_jar_only
  - kind: buildImage
    name: query_image
    dockerFile: query/Dockerfile
@@ -1570,18 +1564,6 @@ steps:
     - scorecard_image
     - deploy_router
     - create_certs
- - kind: deploy
-   name: deploy_grafana
-   namespace:
-     valueFrom: default_ns.name
-   config: grafana/deployment.yaml
-   scopes:
-    - deploy
-    - dev
-   dependsOn:
-    - default_ns
-    - deploy_router
-    - create_certs
  - kind: runImage
    name: create_dummy_oauth2_client_secret
    image:
@@ -2289,7 +2271,7 @@ steps:
      export HAIL_DEFAULT_NAMESPACE={{ default_ns.name }}
      export HAIL_NETCAT_UBUNTU_IMAGE={{ netcat_ubuntu_image.image }}
      export HAIL_HAIL_BASE_IMAGE={{ hail_base_image.image }}
-     export DOCKER_ROOT_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/ubuntu"
+     export DOCKER_ROOT_IMAGE="gcr.io/{{ global.project }}/ubuntu:18.04"
      export HAIL_TEST_TOKEN_FILE=/user-tokens/tokens.json
      export HAIL_TEST_DEV_TOKEN_FILE=/dev-tokens/tokens.json
      export HAIL_TOKEN="{{ token }}"
@@ -2357,7 +2339,7 @@ steps:
      export HAIL_DEFAULT_NAMESPACE={{ default_ns.name }}
      export HAIL_NETCAT_UBUNTU_IMAGE={{ netcat_ubuntu_image.image }}
      export HAIL_HAIL_BASE_IMAGE={{ hail_base_image.image }}
-     export DOCKER_ROOT_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/ubuntu"
+     export DOCKER_ROOT_IMAGE="gcr.io/{{ global.project }}/ubuntu:18.04"
      export HAIL_TEST_TOKEN_FILE=/user-tokens/tokens.json
      export HAIL_TEST_DEV_TOKEN_FILE=/dev-tokens/tokens.json
      export HAIL_TOKEN="{{ token }}"
@@ -2425,7 +2407,7 @@ steps:
      export HAIL_DEFAULT_NAMESPACE={{ default_ns.name }}
      export HAIL_NETCAT_UBUNTU_IMAGE={{ netcat_ubuntu_image.image }}
      export HAIL_HAIL_BASE_IMAGE={{ hail_base_image.image }}
-     export DOCKER_ROOT_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/ubuntu"
+     export DOCKER_ROOT_IMAGE="gcr.io/{{ global.project }}/ubuntu:18.04"
      export HAIL_TEST_TOKEN_FILE=/user-tokens/tokens.json
      export HAIL_TEST_DEV_TOKEN_FILE=/dev-tokens/tokens.json
      export HAIL_TOKEN="{{ token }}"
@@ -2493,7 +2475,7 @@ steps:
      export HAIL_DEFAULT_NAMESPACE={{ default_ns.name }}
      export HAIL_NETCAT_UBUNTU_IMAGE={{ netcat_ubuntu_image.image }}
      export HAIL_HAIL_BASE_IMAGE={{ hail_base_image.image }}
-     export DOCKER_ROOT_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/ubuntu"
+     export DOCKER_ROOT_IMAGE="gcr.io/{{ global.project }}/ubuntu:18.04"
      export HAIL_TEST_TOKEN_FILE=/user-tokens/tokens.json
      export HAIL_TEST_DEV_TOKEN_FILE=/dev-tokens/tokens.json
      export HAIL_TOKEN="{{ token }}"
@@ -2561,7 +2543,7 @@ steps:
      export HAIL_DEFAULT_NAMESPACE={{ default_ns.name }}
      export HAIL_NETCAT_UBUNTU_IMAGE={{ netcat_ubuntu_image.image }}
      export HAIL_HAIL_BASE_IMAGE={{ hail_base_image.image }}
-     export DOCKER_ROOT_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/ubuntu"
+     export DOCKER_ROOT_IMAGE="gcr.io/{{ global.project }}/ubuntu:18.04"
      export HAIL_TEST_TOKEN_FILE=/user-tokens/tokens.json
      export HAIL_TEST_DEV_TOKEN_FILE=/dev-tokens/tokens.json
      export HAIL_TOKEN="{{ token }}"
@@ -2737,8 +2719,8 @@ steps:
      export HAIL_GSA_KEY_FILE=/test-gsa-key/key.json
      export PYTEST_SPLITS=5
      export PYTEST_SPLIT_INDEX=0
-     export DOCKER_ROOT_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/ubuntu"
-     export PYTHON_DILL_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/python-dill:3.7-slim"
+     export DOCKER_ROOT_IMAGE="gcr.io/{{ global.project }}/ubuntu:18.04"
+     export PYTHON_DILL_IMAGE="gcr.io/{{ global.project }}/python-dill:3.7-slim"
      hailctl config set batch/billing_project test
      hailctl config set batch/bucket cpg-hail-test
      python3 -m pytest \
@@ -2788,8 +2770,8 @@ steps:
      export HAIL_GSA_KEY_FILE=/test-gsa-key/key.json
      export PYTEST_SPLITS=5
      export PYTEST_SPLIT_INDEX=1
-     export DOCKER_ROOT_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/ubuntu"
-     export PYTHON_DILL_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/python-dill:3.7-slim"
+     export DOCKER_ROOT_IMAGE="gcr.io/{{ global.project }}/ubuntu:18.04"
+     export PYTHON_DILL_IMAGE="gcr.io/{{ global.project }}/python-dill:3.7-slim"
      hailctl config set batch/billing_project test
      hailctl config set batch/bucket cpg-hail-test
      python3 -m pytest \
@@ -2839,8 +2821,8 @@ steps:
      export HAIL_GSA_KEY_FILE=/test-gsa-key/key.json
      export PYTEST_SPLITS=5
      export PYTEST_SPLIT_INDEX=2
-     export DOCKER_ROOT_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/ubuntu"
-     export PYTHON_DILL_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/python-dill:3.7-slim"
+     export DOCKER_ROOT_IMAGE="gcr.io/{{ global.project }}/ubuntu:18.04"
+     export PYTHON_DILL_IMAGE="gcr.io/{{ global.project }}/python-dill:3.7-slim"
      hailctl config set batch/billing_project test
      hailctl config set batch/bucket cpg-hail-test
      python3 -m pytest \
@@ -2890,8 +2872,8 @@ steps:
      export HAIL_GSA_KEY_FILE=/test-gsa-key/key.json
      export PYTEST_SPLITS=5
      export PYTEST_SPLIT_INDEX=3
-     export DOCKER_ROOT_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/ubuntu"
-     export PYTHON_DILL_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/python-dill:3.7-slim"
+     export DOCKER_ROOT_IMAGE="gcr.io/{{ global.project }}/ubuntu:18.04"
+     export PYTHON_DILL_IMAGE="gcr.io/{{ global.project }}/python-dill:3.7-slim"
      hailctl config set batch/billing_project test
      hailctl config set batch/bucket cpg-hail-test
      python3 -m pytest \
@@ -2941,8 +2923,8 @@ steps:
      export HAIL_GSA_KEY_FILE=/test-gsa-key/key.json
      export PYTEST_SPLITS=5
      export PYTEST_SPLIT_INDEX=4
-     export DOCKER_ROOT_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/ubuntu"
-     export PYTHON_DILL_IMAGE="{{ global.region }}-docker.pkg.dev/{{ global.project }}/hail/python-dill:3.7-slim"
+     export DOCKER_ROOT_IMAGE="gcr.io/{{ global.project }}/ubuntu:18.04"
+     export PYTHON_DILL_IMAGE="gcr.io/{{ global.project }}/python-dill:3.7-slim"
      hailctl config set batch/billing_project test
      hailctl config set batch/bucket cpg-hail-test
      python3 -m pytest \
