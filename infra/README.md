@@ -91,7 +91,8 @@ You can now install Hail:
   sudo snap install --classic kubectl
   sudo usermod -a -G docker $USER
   gcloud -q auth configure-docker
-  gcloud -q auth configure-docker $REGION-docker.pkg.dev
+  # If you are using the Artifact Registry:
+  # gcloud -q auth configure-docker $REGION-docker.pkg.dev
   gcloud container clusters get-credentials --zone <gcp-zone> vdc
   python3 -m pip install -r $HOME/hail/docker/requirements.txt
   ```
