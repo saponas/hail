@@ -1,4 +1,4 @@
 include ../../config.mk
 
 push:
-	PROJECT=$(PROJECT) bash push.sh
+	PROJECT=$(PROJECT) REGION=$(REGION) bash push.sh
