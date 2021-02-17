@@ -21,11 +21,11 @@ DEFAULT_NAMESPACE = os.environ['HAIL_DEFAULT_NAMESPACE']
 log = logging.getLogger('batch')
 routes = web.RouteTableDef()
 
-def add_connection_to_weakref_set(request):
+def add_request_to_weakref_set(request):
     # potential modification of connection object
     request.app['connections'].add(request)
 
-def remove_connection_from_weakref_set(request):
+def remove_request_from_weakref_set(request):
     request.app['connections'].discard(request)
 
 def java_to_web_response(jresp):
@@ -108,7 +108,7 @@ async def handle_ws_response(request, userdata, endpoint, f):
     app = request.app
     jbackend = app['jbackend']
     # track connections for graceful shut down
-    add_connection_to_weakref_set(request)
+    add_request_to_weakref_set(request)
 
     await add_user(app, userdata)
     log.info(f'{endpoint}: connecting websocket')
@@ -131,7 +131,7 @@ async def handle_ws_response(request, userdata, endpoint, f):
             task.cancel()
             log.info(f'{endpoint}: Task has been cancelled due to websocket closure.')
         log.info(f'{endpoint}: websocket connection closed')
-        remove_connection_from_weakref_set(request)
+        remove_request_from_weakref_set(request)
 
 
 @routes.get('/api/v1alpha/execute')
@@ -208,16 +208,21 @@ async def set_flag(request, userdata):  # pylint: disable=unused-argument
 
 # Test method, for testing "waiting tasks"
 @routes.get('/api/wait/')
-async def wait_seconds(request, duration):
-    add_connection_to_weakref_set(request)
+async def wait_seconds(request, userdata):
+    add_request_to_weakref_set(request)
 
+    duration = request.query.get('duration')
+    if not duration:
+        return web.json_response({
+            'error': 'Expected to find query parameter "duration"',
+        }, status=422)
     if not isinstance(duration, (int, float)):
         return web.json_response({
             'error': f'Expected duration to be an int, got {type(duration)}',
         }, status=422)
 
     await asyncio.sleep(int(duration))
-    remove_connection_from_weakref_set(request)
+    remove_request_from_weakref_set(request)
     return web.json_response({"d": f"You waited '{duration}' seconds!"})
 
 
