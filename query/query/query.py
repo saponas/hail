@@ -21,12 +21,38 @@ DEFAULT_NAMESPACE = os.environ['HAIL_DEFAULT_NAMESPACE']
 log = logging.getLogger('batch')
 routes = web.RouteTableDef()
 
+
 def add_request_to_weakref_set(request):
     # potential modification of connection object
-    request.app['connections'].add(request)
+    request.app['connections'] += 1
+
 
 def remove_request_from_weakref_set(request):
-    request.app['connections'].discard(request)
+    request.app['connections'] -= 1
+
+
+# decorator for requests
+def wait_for_request(func):
+    def wrapper(request, *args, **kwargs):
+        resp, exp = None, None
+        # add_request_to_weakref_set(request)
+        # wrap this in a try / catch, because even if the request
+        # fails, we want to decrement the counter
+        try:
+            resp = func(request, *args, **kwargs)
+        except Exception as e:
+            log.error(f"Got error when running function: {e}")
+            exp = e
+        finally:
+            # remove_request_from_weakref_set(request)
+            if exp is not None:
+                import traceback
+
+                return web.json_response({"error": repr(exp), "tb": traceback.format_exc()}, status=500)
+            return resp
+
+    return wrapper
+
 
 def java_to_web_response(jresp):
     status = jresp.status()
@@ -208,22 +234,34 @@ async def set_flag(request, userdata):  # pylint: disable=unused-argument
 
 # Test method, for testing "waiting tasks"
 @routes.get('/api/wait/')
-async def wait_seconds(request, userdata):
-    add_request_to_weakref_set(request)
-
+@wait_for_request
+async def wait_seconds(request):
+    # def repr_obj(v):
+    #     if isinstance(v, dict):
+    #         return {k: repr_obj(v) for k,v in v.items()}
+    #     elif isinstance(v, list):
+    #         return [repr_obj(vv) for vv in v]
+    #     else:
+    #         return repr(v)
+    # try:
+    #     add_request_to_weakref_set(request)
+    # except Exception as e:
+    #     return web.json_response({
+    #         'error': f'Couldnt add request to weakref set": {e}',
+    #         'request': repr_obj(request.__dict__)
+    #     }, status=500)
     duration = request.query.get('duration')
-    if not duration:
+    try:
+
+        duration = int(duration)
+    except Exception as e:
         return web.json_response({
-            'error': 'Expected to find query parameter "duration"',
-        }, status=422)
-    if not isinstance(duration, (int, float)):
-        return web.json_response({
-            'error': f'Expected duration to be an int, got {type(duration)}',
+            'error': f'Invalid parameter duration "{duration}": {e}',
         }, status=422)
 
     await asyncio.sleep(int(duration))
-    remove_request_from_weakref_set(request)
-    return web.json_response({"d": f"You waited '{duration}' seconds!"})
+    # remove_request_from_weakref_set(request)
+    return web.json_response({"d": f"You waited '{duration}' seconds!", 'counter': request.app["connections"]})
 
 
 async def on_startup(app):
@@ -254,7 +292,7 @@ async def on_startup(app):
     app['k8s_client'] = k8s_client
 
     # store connections, so we can wait for them to finish on graceful shutdown
-    app['connections'] = WeakSet()
+    app['connections'] = 0
 
 
 async def on_cleanup(app):
@@ -298,3 +336,6 @@ def run():
         port=5000,
         access_log_class=AccessLogger,
         ssl_context=internal_server_ssl_context())
+
+# if __name__ == "__main__":
+#     run()
