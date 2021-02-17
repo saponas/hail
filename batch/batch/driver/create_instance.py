@@ -172,7 +172,7 @@ NAME=$(curl -s http://metadata.google.internal/computeMetadata/v1/instance/name 
 ZONE=$(curl -s http://metadata.google.internal/computeMetadata/v1/instance/zone -H 'Metadata-Flavor: Google')
 
 BATCH_WORKER_IMAGE=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/attributes/batch_worker_image")
-DOCKER_PREFIX=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/attributes/docker_prefix")
+DOCKER_PREFIX=australia-southeast1-docker.pkg.dev/$PROJECT/hail
 
 # Setup fluentd
 touch /worker.log
