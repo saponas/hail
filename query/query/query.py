@@ -21,15 +21,6 @@ log = logging.getLogger('batch')
 routes = web.RouteTableDef()
 
 
-def add_request_to_weakref_set(request):
-    # potential modification of connection object
-    request.app['connections'] += 1
-
-
-def remove_request_from_weakref_set(request):
-    request.app['connections'] -= 1
-
-
 # decorator for requests
 def wait_for_request(func):
     def wrapper(request, *args, **kwargs):
@@ -228,24 +219,6 @@ async def set_flag(request, userdata):  # pylint: disable=unused-argument
     return java_to_web_response(jresp)
 
 
-# Test method, for testing "waiting tasks"
-@routes.get('/api/wait/')
-@wait_for_request
-async def wait_seconds(request):
-    duration = request.query.get('duration')
-    try:
-
-        duration = int(duration)
-    except Exception as e:
-        return web.json_response({
-            'error': f'Invalid parameter duration "{duration}": {e}',
-        }, status=422)
-
-    await asyncio.sleep(int(duration))
-    # remove_request_from_weakref_set(request)
-    return web.json_response({"d": f"You waited '{duration}' seconds!", 'counter': request.app["connections"]})
-
-
 async def on_startup(app):
     thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=16)
     app['thread_pool'] = thread_pool
@@ -287,7 +260,6 @@ async def wait_for_all_connections(app):
 
     return True
 
-
 def run():
     app = web.Application()
 
@@ -306,6 +278,3 @@ def run():
         port=5000,
         access_log_class=AccessLogger,
         ssl_context=internal_server_ssl_context())
-
-# if __name__ == "__main__":
-#     run()
