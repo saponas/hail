@@ -21,29 +21,6 @@ log = logging.getLogger('batch')
 routes = web.RouteTableDef()
 
 
-# decorator for requests
-def wait_for_request(func):
-    def wrapper(request, *args, **kwargs):
-        resp, exp = None, None
-        # add_request_to_weakref_set(request)
-        # wrap this in a try / catch, because even if the request
-        # fails, we want to decrement the counter
-        try:
-            resp = func(request, *args, **kwargs)
-        except Exception as e:
-            log.error(f"Got error when running function: {e}")
-            exp = e
-        finally:
-            # remove_request_from_weakref_set(request)
-            if exp is not None:
-                import traceback
-
-                return web.json_response({"error": repr(exp), "tb": traceback.format_exc()}, status=500)
-            return resp
-
-    return wrapper
-
-
 def java_to_web_response(jresp):
     status = jresp.status()
     value = jresp.value()
@@ -245,9 +222,6 @@ async def on_startup(app):
     kube.config.load_incluster_config()
     k8s_client = kube.client.CoreV1Api()
     app['k8s_client'] = k8s_client
-
-    # store open connection count, so we can wait for them to finish on graceful shutdown
-    app['connections'] = 0
 
 
 async def on_cleanup(app):
