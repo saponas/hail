@@ -4,7 +4,6 @@ import base64
 import concurrent
 import logging
 import uvloop
-from weakref import WeakSet
 import asyncio
 from aiohttp import web
 import kubernetes_asyncio as kube
@@ -133,8 +132,6 @@ def blocking_get_reference(jbackend, userdata, body):   # pylint: disable=unused
 async def handle_ws_response(request, userdata, endpoint, f):
     app = request.app
     jbackend = app['jbackend']
-    # track connections for graceful shut down
-    add_request_to_weakref_set(request)
 
     await add_user(app, userdata)
     log.info(f'{endpoint}: connecting websocket')
@@ -157,7 +154,6 @@ async def handle_ws_response(request, userdata, endpoint, f):
             task.cancel()
             log.info(f'{endpoint}: Task has been cancelled due to websocket closure.')
         log.info(f'{endpoint}: websocket connection closed')
-        remove_request_from_weakref_set(request)
 
 
 @routes.get('/api/v1alpha/execute')
@@ -236,20 +232,6 @@ async def set_flag(request, userdata):  # pylint: disable=unused-argument
 @routes.get('/api/wait/')
 @wait_for_request
 async def wait_seconds(request):
-    # def repr_obj(v):
-    #     if isinstance(v, dict):
-    #         return {k: repr_obj(v) for k,v in v.items()}
-    #     elif isinstance(v, list):
-    #         return [repr_obj(vv) for vv in v]
-    #     else:
-    #         return repr(v)
-    # try:
-    #     add_request_to_weakref_set(request)
-    # except Exception as e:
-    #     return web.json_response({
-    #         'error': f'Couldnt add request to weakref set": {e}',
-    #         'request': repr_obj(request.__dict__)
-    #     }, status=500)
     duration = request.query.get('duration')
     try:
 
@@ -291,7 +273,7 @@ async def on_startup(app):
     k8s_client = kube.client.CoreV1Api()
     app['k8s_client'] = k8s_client
 
-    # store connections, so we can wait for them to finish on graceful shutdown
+    # store open connection count, so we can wait for them to finish on graceful shutdown
     app['connections'] = 0
 
 
@@ -301,19 +283,7 @@ async def on_cleanup(app):
 
 
 async def wait_for_all_connections(app):
-    connections = app['connections']
-    if len(connections) > 0:
-        log.info(f'Query service is closing, waiting for {len(connections)} connections to close')
-        loop_counter = 0
-        while len(connections) > 0:
-            loop_counter += 1
-            if loop_counter % 300 == 0:
-                # 5 minutes
-                log.info(f'Still waiting for {len(connections)} connections to close')
-            await asyncio.sleep(1)
-        log.info("All connections have been closed, query service is shutting down")
-    else:
-        log.info("Query service is shutting down with no open connections to wait for")
+    await asyncio.gather(*(t for t in asyncio.all_tasks() if t is not asyncio.current_task()))
 
     return True
 
