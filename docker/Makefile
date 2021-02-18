@@ -48,6 +48,7 @@ service-base: base-stmp
 	python3 ../ci/jinja2_render.py '{"base_image":{"image":"base"}}' Dockerfile.service-base Dockerfile.service-base.out
 	[ "$(shell bash stat-permissions.sh Dockerfile.service-base.out)" = "644" ]
 	[ "$(shell bash stat-permissions.sh service-base-requirements.txt)" = "644" ]
+	make -C ../hail python-version-info
 	docker build -t service-base -f Dockerfile.service-base.out --cache-from service-base,$(SERVICE_BASE_LATEST),base,hail-ubuntu ..
 
 .PHONY: hail-public-image
