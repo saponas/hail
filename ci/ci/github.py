@@ -818,7 +818,7 @@ class UnwatchedBranch(Code):
     def __init__(self, branch, sha, userdata):
         self.branch = branch
         self.user = userdata['username']
-        self.namespace = userdata['namespace_name']
+        self.namespace = 'default'  # userdata['namespace_name']
         self.sha = sha
 
         self.deploy_batch = None
