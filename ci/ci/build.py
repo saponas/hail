@@ -752,9 +752,14 @@ class DeployStep(Step):
         return {'token': self.token}
 
     def build(self, batch, code, scope):
+        log.info(f'build: reading {code.repo_dir()}/{self.config_file}')
         with open(f'{code.repo_dir()}/{self.config_file}', 'r') as f:
             template = jinja2.Template(f.read(), undefined=jinja2.StrictUndefined, trim_blocks=True, lstrip_blocks=True)
+            log.info(f'build: template={f.read()}')
+            conf = self.input_config(code, scope)
+            log.info(f'build: conf[global]={conf["global"]}')
             rendered_config = template.render(**self.input_config(code, scope))
+            log.info(f'build: rendered_config={rendered_config}')
 
         script = '''\
 set -ex

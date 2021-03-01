@@ -793,7 +793,7 @@ mkdir -p {shq(repo_dir)}
         except concurrent.futures.CancelledError:
             raise
         except Exception as e:  # pylint: disable=broad-except
-            log.exception('could not start deploy')
+            log.exception(f'could not start deploy with {e} of {type(e)}')
             self.deploy_batch = MergeFailureBatch(
                 e, attributes={'deploy': '1', 'target_branch': self.branch.short_str(), 'sha': self.sha}
             )
