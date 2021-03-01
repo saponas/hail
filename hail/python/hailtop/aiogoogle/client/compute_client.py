@@ -38,6 +38,10 @@ class PagedIterator:
                 raise StopAsyncIteration
 
 
+import logging
+log = logging.getLogger('compute_client')
+
+
 class ComputeClient(BaseClient):
     def __init__(self, project, **kwargs):
         super().__init__(f'https://compute.googleapis.com/compute/v1/projects/{project}', **kwargs)
@@ -50,3 +54,11 @@ class ComputeClient(BaseClient):
 
     async def list(self, path: str, *, params: Mapping[str, Any] = None, **kwargs) -> PagedIterator:
         return PagedIterator(self, path, params, kwargs)
+
+    async def post(self, path: str, **kwargs) -> Any:
+        log.info(f'ComputeClient.pos path={path}')
+        log.info(f'ComputeClient.pos url={self._base_url}{path}')
+        log.info(f'ComputeClient.pos kwargs={kwargs}')
+        async with await self._session.post(
+                f'{self._base_url}{path}', **kwargs) as resp:
+            return await resp.json()

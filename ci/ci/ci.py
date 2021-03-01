@@ -145,7 +145,7 @@ async def prod_deploy(request, unused_userdata):
         raise web.HTTPBadRequest(text=message) from e
 
     watched_branch = WatchedBranch(
-        0, FQBranch.from_short_str('populationgenomics/hail:main'), True
+        0, FQBranch.from_short_str('populationgenomics/hail:main-before-ar-changes'), True
     )
     watched_branch.sha = 'HEAD'
     await watched_branch._start_deploy(request.app['batch_client'], steps)

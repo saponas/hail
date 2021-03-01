@@ -336,6 +336,7 @@ HAVING n_ready_jobs + n_running_jobs > 0;
 
     async def schedule_loop_body(self):
         log.info(f'schedule {self.pool}: starting')
+        log.info(f'schedule_loop_body')
         start = time_msecs()
         n_scheduled = 0
 
@@ -353,6 +354,7 @@ HAVING n_ready_jobs + n_running_jobs > 0;
         }
 
         async def user_runnable_jobs(user, remaining):
+            log.info(f'user_runnable_jobs user={user} remaining={remaining}')
             async for batch in self.db.select_and_fetchall(
                     '''
 SELECT id, cancelled, userdata, user, format_version
@@ -392,6 +394,7 @@ LIMIT %s;
                         yield record
 
         waitable_pool = WaitableSharedPool(self.async_worker_pool)
+        log.info(f'schedule_loop_body self.async_worker_pool={self.async_worker_pool}')
 
         def get_instance(user, cores_mcpu):
             i = self.pool.healthy_instances_by_free_cores.bisect_key_left(cores_mcpu)
@@ -408,6 +411,7 @@ LIMIT %s;
 
         should_wait = True
         for user, resources in user_resources.items():
+            log.info(f'schedule_loop_body user={user} resources={resources}')
             allocated_cores_mcpu = resources['allocated_cores_mcpu']
             if allocated_cores_mcpu == 0:
                 continue

@@ -42,6 +42,7 @@ async def create_instance(app, zone, machine_name, machine_type, activation_toke
         }
         worker_data_disk_name = 'sdb'
 
+    log.info(f'create_instance.py')
     config = {
         'name': machine_name,
         'machineType': f'projects/{PROJECT}/zones/{zone}/machineTypes/{machine_type}',
@@ -318,13 +319,19 @@ journalctl -u docker.service > dockerd.log
         },
     }
 
+    log.info(f'create_instance.py config={config}')
     worker_config = WorkerConfig.from_instance_config(config, job_private)
+    log.info(f'create_instance.py worker_config={worker_config}')
     assert worker_config.is_valid_configuration(app['resources'])
     config['metadata']['items'].append({
         'key': 'worker_config',
         'value': base64.b64encode(json.dumps(worker_config.config).encode()).decode()
     })
 
+    log.info(f'create_instance.py compute_client.post /zones/{zone}/instances')
+    log.info(f'create_instance.py config: {config}')
+    config_base64 = base64.b64encode(json.dumps(worker_config.config).encode()).decode()
+    log.info(f'create_instance.py config in base64: {config_base64}')
     await compute_client.post(
         f'/zones/{zone}/instances', json=config)
 

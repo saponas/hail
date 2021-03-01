@@ -47,14 +47,17 @@ class JobPrivateInstanceManager(InstanceCollection):
             instance = Instance.from_record(self.app, self, record)
             self.add_instance(instance)
 
+        log.info('self.task_manager.ensure_future retry_long_running create_instances_loop')
         self.task_manager.ensure_future(retry_long_running(
             'create_instances_loop',
             run_if_changed, self.create_instances_state_changed, self.create_instances_loop_body))
-
+        
+        log.info('self.task_manager.ensure_future retry_long_running schedule_jobs_loop')
         self.task_manager.ensure_future(retry_long_running(
             'schedule_jobs_loop',
             run_if_changed, self.scheduler_state_changed, self.schedule_jobs_loop_body))
 
+        log.info('self.task_manager.ensure_future periodically_call bump_scheduler')
         self.task_manager.ensure_future(periodically_call(15, self.bump_scheduler))
 
     def config(self):
@@ -85,6 +88,7 @@ WHERE name = %s;
     async def schedule_jobs_loop_body(self):
         log.info(f'starting scheduling jobs for {self}')
         waitable_pool = WaitableSharedPool(self.async_worker_pool)
+        log.info(f'schedule_jobs_loop_body: self.async_worker_pool={self.async_worker_pool}')
 
         should_wait = True
 
@@ -107,12 +111,14 @@ LIMIT 300;
 ''',
                 (self.name,),
                 timer_description=f'in schedule_jobs for {self}: get ready jobs with active instances'):
+            log.info(f'schedule_jobs_loop_body async for record in self.db.select_and_fetchall: record={record}')
             batch_id = record['batch_id']
             job_id = record['job_id']
             instance_name = record['instance_name']
             id = (batch_id, job_id)
             log.info(f'scheduling job {id}')
 
+            log.info(f'schedule_jobs_loop_body async for record in self.db.select_and_fetchall: instance_name={instance_name}')
             instance = self.name_instance[instance_name]
             n_scheduled += 1
             should_wait = False
@@ -123,11 +129,14 @@ LIMIT 300;
                 except Exception:
                     log.info(f'scheduling job {id} on {instance} for {self}', exc_info=True)
 
+            log.info(f'schedule_jobs_loop_body async for record in self.db.select_and_fetchall: await waitable_pool.call')
             await waitable_pool.call(
                 schedule_with_error_handling, self.app, record, id, instance)
+            log.info(f'schedule_jobs_loop_body async for record in self.db.select_and_fetchall: await waitable_pool.call done')
 
             n_scheduled += 1
 
+        log.info(f'schedule_jobs_loop_body waitable_pool.wait()')
         await waitable_pool.wait()
 
         log.info(f'scheduled {n_scheduled} jobs for {self}')
@@ -219,6 +228,7 @@ HAVING n_ready_jobs + n_creating_jobs + n_running_jobs > 0;
         return result
 
     async def create_instance(self, batch_id, job_id, machine_spec):
+        log.info(f'create_instance batch_id={batch_id} job_id={job_id} machine_spec={machine_spec}')
         assert machine_spec is not None
 
         machine_name = self.generate_machine_name()
@@ -226,18 +236,23 @@ HAVING n_ready_jobs + n_creating_jobs + n_running_jobs > 0;
         preemptible = machine_spec['preemptible']
         storage_gb = machine_spec['storage_gib']
 
+        log.info(f'create_instance machine_name={machine_name} machine_type={machine_type}')
         machine_type_dict = machine_type_to_dict(machine_type)
         cores = int(machine_type_dict['cores'])
         cores_mcpu = cores * 1000
         worker_type = machine_type_dict['machine_type']
+        log.info(f'create_instance worker_type={worker_type} cores={cores}')
 
         zone = self.zone_monitor.get_zone(cores, False, storage_gb)
+        log.info(f'create_instance zone={zone}')
         if zone is None:
             return
 
         activation_token = secrets.token_urlsafe(32)
+        log.info(f'create_instance activation_token={activation_token}')
         instance = await Instance.create(self.app, self, machine_name, activation_token, cores_mcpu,
                                          zone, machine_type, preemptible)
+        log.info(f'create_instance instance={instance}')
         self.add_instance(instance)
         log.info(f'created {instance} for {(batch_id, job_id)}')
 
@@ -252,6 +267,7 @@ HAVING n_ready_jobs + n_creating_jobs + n_running_jobs > 0;
                                               boot_disk_size_gb=self.boot_disk_size_gb,
                                               preemptible=preemptible,
                                               job_private=True)
+        log.info(f'create_instance worker_config={worker_config}')
 
         memory_in_bytes = worker_memory_per_core_bytes(worker_type)
         resources = worker_config.resources(cores_mcpu, memory_in_bytes)
@@ -259,6 +275,7 @@ HAVING n_ready_jobs + n_creating_jobs + n_running_jobs > 0;
         return (instance, resources)
 
     async def create_instances_loop_body(self):
+        log.info(f'create_instances_loop_body')
         log.info(f'create_instances for {self}: starting')
         start = time_msecs()
         n_instances_created = 0
@@ -267,6 +284,7 @@ HAVING n_ready_jobs + n_creating_jobs + n_running_jobs > 0;
 
         total = sum(resources['n_allocated_jobs']
                     for resources in user_resources.values())
+        log.info(f'create_instances_loop_body total={total}')
         if not total:
             log.info(f'create_instances {self}: no allocated jobs')
             should_wait = True
@@ -275,6 +293,7 @@ HAVING n_ready_jobs + n_creating_jobs + n_running_jobs > 0;
             user: max(int(300 * resources['n_allocated_jobs'] / total + 0.5), 20)
             for user, resources in user_resources.items()
         }
+        log.info(f'create_instances_loop_body user_share={user_share}')
 
         async def user_runnable_jobs(user, remaining):
             async for batch in self.db.select_and_fetchall(
@@ -325,14 +344,18 @@ LIMIT %s;
                         record['format_version'] = batch['format_version']
                         yield record
 
+        log.info(f'create_instances_loop_body async_worker_pool={self.async_worker_pool}')
         waitable_pool = WaitableSharedPool(self.async_worker_pool)
+        log.info(f'create_instances_loop_body waitable_pool={waitable_pool}')
 
         should_wait = True
         for user, resources in user_resources.items():
+            log.info(f'create_instances_loop_body user={user}, resources={resources}')
             n_allocated_instances = resources['n_allocated_jobs']
             if n_allocated_instances == 0:
                 continue
 
+            log.info(f'create_instances_loop_body n_allocated_instances={n_allocated_instances}')
             n_user_instances_created = 0
 
             share = user_share[user]
@@ -347,6 +370,7 @@ LIMIT %s;
                 attempt_id = secret_alnum_string(6)
                 record['attempt_id'] = attempt_id
 
+                log.info(f'create_instances_loop_body record={record}')
                 if n_user_instances_created >= n_allocated_instances:
                     if random.random() > self.exceeded_shares_counter.rate():
                         self.exceeded_shares_counter.push(True)
@@ -373,10 +397,12 @@ LIMIT %s;
                 await waitable_pool.call(
                     create_instance_with_error_handling, batch_id, job_id, attempt_id, record, id)
 
+                log.info(f'create_instances_loop_body remaining.value={remaining.value}')
                 remaining.value -= 1
                 if remaining.value <= 0:
                     break
 
+        log.info(f'create_instances_loop_body waitable_pool.wait()')
         await waitable_pool.wait()
 
         end = time_msecs()

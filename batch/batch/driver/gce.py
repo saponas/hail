@@ -52,6 +52,7 @@ class GCEEventMonitor:
         await instance.mark_deleted('deleted', timestamp)
 
     async def handle_event(self, event):
+        log.info(f'handle_event event={event}')
         payload = event.get('protoPayload')
         if payload is None:
             log.warning(f'event has no payload {json.dumps(event)}')
@@ -110,6 +111,7 @@ class GCEEventMonitor:
                     await self.handle_call_delete_event(instance, timestamp)
 
     async def handle_events(self):
+        log.info(f'handle_events')
         row = await self.db.select_and_fetchone('SELECT * FROM `gevents_mark`;')
         mark = row['mark']
         if mark is None:
@@ -135,12 +137,15 @@ timestamp >= "{mark}"
                 }):
             # take the last, largest timestamp
             mark = event['timestamp']
+            log.info(f'handle_events: handle_event(event), event={event}')
             await self.handle_event(event)
 
+        log.info(f'handle_events: mark={mark}')
         if mark is not None:
             await self.db.execute_update(
                 'UPDATE `gevents_mark` SET mark = %s;',
                 (mark,))
 
     async def event_loop(self):
+        log.info(f'event_loop')
         await periodically_call(15, self.handle_events)
