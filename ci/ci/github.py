@@ -775,7 +775,10 @@ mkdir -p {shq(repo_dir)}
 '''
             )
             with open(f'{repo_dir}/build.yaml', 'r') as f:
-                config = BuildConfiguration(self, f.read(), scope='deploy', requested_step_names=steps)
+                cont = f.read()
+                log.info(f'_start_deploy build.yaml: {cont}')
+                config = BuildConfiguration(self, cont, scope='deploy', requested_step_names=steps)
+                log.info(f'_start_deploy config: {config}')
 
             log.info(f'creating deploy batch for {self.branch.short_str()}')
             deploy_batch = batch_client.create_batch(

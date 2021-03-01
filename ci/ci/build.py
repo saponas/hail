@@ -90,7 +90,12 @@ class BuildConfigurationError(Exception):
 
 class BuildConfiguration:
     def __init__(self, code, config_str, scope, requested_step_names=()):
+        log.info(f'BuildConfiguration code: {code}')
+        log.info(f'BuildConfiguration config_str: {config_str}')
+        log.info(f'BuildConfiguration scope: {scope}')
+        log.info(f'BuildConfiguration requested_step_names: {requested_step_names}')
         config = yaml.safe_load(config_str)
+        log.info(f'BuildConfiguration config: {config}')
         name_step = {}
         self.steps = []
 
@@ -98,13 +103,17 @@ class BuildConfiguration:
             log.info(f"Constructing build configuration with steps: {requested_step_names}")
 
         for step_config in config['steps']:
+            log.info(f'BuildConfiguration config["steps"]: {config["steps"]}')
             step_params = StepParameters(code, scope, step_config, name_step)
+            log.info(f'BuildConfiguration step_params: {step_params}')
             step = Step.from_json(step_params)
+            log.info(f'BuildConfiguration step: {step}')
             if not step.run_if_requested or step.name in requested_step_names:
                 self.steps.append(step)
                 name_step[step.name] = step
             else:
                 name_step[step.name] = None
+            log.info(f'BuildConfiguration name_step: {name_step}')
 
         # transitively close requested_step_names over dependencies
         if requested_step_names:
@@ -119,6 +128,7 @@ class BuildConfiguration:
             for step_name in requested_step_names:
                 request(name_step[step_name])
             self.steps = [s for s in self.steps if s in visited]
+            log.info(f'BuildConfiguration requested_step_names self.steps: {self.steps}')
 
     def build(self, batch, code, scope):
         assert scope in ('deploy', 'test', 'dev')
@@ -754,8 +764,9 @@ class DeployStep(Step):
     def build(self, batch, code, scope):
         log.info(f'build: reading {code.repo_dir()}/{self.config_file}')
         with open(f'{code.repo_dir()}/{self.config_file}', 'r') as f:
-            template = jinja2.Template(f.read(), undefined=jinja2.StrictUndefined, trim_blocks=True, lstrip_blocks=True)
-            log.info(f'build: template={f.read()}')
+            cont = f.read()
+            template = jinja2.Template(cont, undefined=jinja2.StrictUndefined, trim_blocks=True, lstrip_blocks=True)
+            log.info(f'build: template={cont}')
             conf = self.input_config(code, scope)
             log.info(f'build: conf[global]={conf["global"]}')
             rendered_config = template.render(**self.input_config(code, scope))
