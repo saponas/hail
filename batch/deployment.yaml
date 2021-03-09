@@ -42,15 +42,12 @@ spec:
          - -m
          - batch.driver
         resources:
-{% if deploy %}
-           requests:
-             memory: 375Mi
-             cpu: 100m
-{% else %}
-           requests:
-             memory: 37Mi
-             cpu: 10m
-{% endif %}
+          requests:
+            cpu: "600m"
+            memory: "2G"
+          limits:
+            cpu: "1"
+            memory: "2.5G"
         env:
          - name: HAIL_DOMAIN
            value: "{{ global.domain }}"
@@ -62,6 +59,8 @@ spec:
            value: "{{ default_ns.name }}"
          - name: PROJECT
            value: "{{ global.project }}"
+         - name: HAIL_DOCKER_ROOT_IMAGE
+           value: "{{ global.docker_root_image }}"
          - name: HAIL_DOCKER_PREFIX
            value: "{{ global.docker_prefix }}"
          - name: HAIL_GCP_REGION
@@ -200,6 +199,8 @@ spec:
            value: "{{ default_ns.name }}"
          - name: PROJECT
            value: "{{ global.project }}"
+         - name: HAIL_DOCKER_ROOT_IMAGE
+           value: "{{ global.docker_root_image }}"
          - name: HAIL_DOCKER_PREFIX
            value: "{{ global.docker_prefix }}"
          - name: HAIL_GCP_REGION
@@ -221,16 +222,6 @@ spec:
            value: "{{ global.k8s_server_url }}"
          - name: HAIL_SHA
            value: "{{ code.sha }}"
-{% if not deploy %}
-         - name: HAIL_BATCH_JOB_DEFAULT_CPU
-           value: "0.1"
-         - name: HAIL_BATCH_JOB_DEFAULT_MEMORY
-           value: "375M"
-         - name: HAIL_BATCH_JOB_DEFAULT_STORAGE
-           value: "1G"
-         - name: HAIL_BATCH_JOB_DEFAULT_WORKER_TYPE
-           value: "standard"
-{% endif %}
 {% if deploy %}
          - name: HAIL_BATCH_BUCKET_NAME
            valueFrom:
@@ -249,11 +240,11 @@ spec:
          - containerPort: 5000
         resources:
           requests:
-            memory: "100M"
-            cpu: "100m"
+            cpu: "20m"
+            memory: "20M"
           limits:
-            memory: "1G"
             cpu: "1"
+            memory: "1G"
         volumeMounts:
          - name: deploy-config
            mountPath: /deploy-config

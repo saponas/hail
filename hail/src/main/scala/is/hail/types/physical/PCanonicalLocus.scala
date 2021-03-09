@@ -2,6 +2,7 @@ package is.hail.types.physical
 
 import is.hail.annotations._
 import is.hail.asm4s._
+import is.hail.expr.ir.orderings.CodeOrdering
 import is.hail.expr.ir.{EmitCode, EmitCodeBuilder, EmitMethodBuilder}
 import is.hail.types.physical.stypes.SCode
 import is.hail.types.physical.stypes.concrete.{SCanonicalLocusPointer, SCanonicalLocusPointerCode, SStringPointer}
@@ -29,7 +30,6 @@ final case class PCanonicalLocus(rgBc: BroadcastRG, required: Boolean = false) e
 
   def byteSize: Long = representation.byteSize
   override def alignment: Long = representation.alignment
-  override lazy val fundamentalType: PStruct = representation.fundamentalType
 
   def rg: ReferenceGenome = rgBc.value
 
@@ -56,19 +56,17 @@ final case class PCanonicalLocus(rgBc: BroadcastRG, required: Boolean = false) e
 
   // FIXME: Remove when representation of contig/position is a naturally-ordered Long
   override def unsafeOrdering(): UnsafeOrdering = {
-    val repr = representation.fundamentalType
-
     val localRGBc = rgBc
-    val binaryOrd = repr.fieldType("contig").asInstanceOf[PBinary].unsafeOrdering()
+    val binaryOrd = representation.fieldType("contig").unsafeOrdering()
 
     new UnsafeOrdering {
       def compare(o1: Long, o2: Long): Int = {
-        val cOff1 = repr.loadField(o1, 0)
-        val cOff2 = repr.loadField(o2, 0)
+        val cOff1 = representation.loadField(o1, 0)
+        val cOff2 = representation.loadField(o2, 0)
 
         if (binaryOrd.compare(cOff1, cOff2) == 0) {
-          val posOff1 = repr.loadField(o1, 1)
-          val posOff2 = repr.loadField(o2, 1)
+          val posOff1 = representation.loadField(o1, 1)
+          val posOff2 = representation.loadField(o2, 1)
           java.lang.Integer.compare(Region.loadInt(posOff1), Region.loadInt(posOff2))
         } else {
           val contig1 = contigType.loadString(cOff1)
@@ -78,9 +76,6 @@ final case class PCanonicalLocus(rgBc: BroadcastRG, required: Boolean = false) e
       }
     }
   }
-
-  def codeOrdering(mb: EmitMethodBuilder[_], other: PType): CodeOrdering =
-    CodeOrdering.locusOrdering(this, other.asInstanceOf[PLocus], mb)
 
   override def unstagedStoreAtAddress(addr: Long, region: Region, srcPType: PType, srcAddress: Long, deepCopy: Boolean): Unit = {
     srcPType match {
