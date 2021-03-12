@@ -375,6 +375,46 @@ class ServiceBackend() extends Backend {
     }
   }
 
+  private[this] def registerFunction(
+      ctx: ExecuteContext,
+      name: String,
+      typeParameters: java.util.ArrayList[String],
+      argumentNames: java.util.ArrayList[String],
+      argumentTypes: java.util.ArrayList[String],
+      returnType: String,
+      body: IR,
+    ): Unit = {
+ 
+    registerIR(name, valueParameterTypes=argumentTypes, returnType=returnType, typeParameters=typeParameters)(body)
+  }
+
+  def registerFunction(
+      username: String,
+      sessionID: String,
+      billingProject: String,
+      bucket: String,
+      name: String,
+      typeParameters: java.util.ArrayList[String],
+      argumentNames: java.util.ArrayList[String],
+      argumentTypes: java.util.ArrayList[String],
+      returnType: String,
+      body: String,
+    ): Unit = {
+
+    userContext(username, timer) { ctx =>
+      ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
+      registerFunction(
+        ctx,
+        name,
+        typeParameters,
+        argumentNames,
+        argumentTypes,
+        returnType,
+        IRParser.parse_value_ir(ctx, body),
+      )
+    }
+  }
+
   def flags(): String = {
     JsonMethods.compact(JObject(HailContext.get.flags.available.toArray().map { case f: String =>
       val v = HailContext.getFlag(f)
@@ -501,6 +541,7 @@ class ServiceBackendSocketAPI(backend: ServiceBackend, socket: Socket) extends T
   private[this] val UNSET_FLAG = 10
   private[this] val SET_FLAG = 11
   private[this] val ADD_USER = 12
+  private[this] val REGISTER_IR_FUNCTION = 13
   private[this] val GOODBYE = 254
 
   private[this] val in = socket.getInputStream
@@ -657,6 +698,29 @@ class ServiceBackendSocketAPI(backend: ServiceBackend, socket: Socket) extends T
           val token = readString()
           try {
             val result = backend.execute(username, sessionId, billingProject, bucket, code, token)
+            writeBool(true)
+            writeString(result)
+          } catch {
+            case t: Throwable =>
+              writeBool(false)
+              writeString(formatException(t))
+          }
+
+        case REGISTER_IR_FUNCTION =>
+          val username = readString()
+          val sessionId = readString()
+          val billingProject = readString()
+          val bucket = readString()
+          val name = readString()
+          val typeParameters = readString().split(",")
+          val argumentNames = readString().split(",")
+          val argumentTypes = readString().split(",")
+          val returnType = readString()
+          val body = readString()
+          try {
+            val result = backend.registerFunction(
+              sername, sessionId, billingProject, bucket, name,
+              typeParameters, argumentNames, argumentTypes, returnType, body)
             writeBool(true)
             writeString(result)
           } catch {
