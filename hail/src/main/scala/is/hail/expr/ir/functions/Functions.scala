@@ -61,6 +61,30 @@ object IRFunctionRegistry {
     m.update((typeParameters, valueParameterTypes, returnType, alwaysInline), f)
   }
 
+  def registerIR(
+    name: String,
+    typeParamStrs: Array[String],
+    argNames: Array[String],
+    argTypeStrs: Array[String],
+    returnType: String,
+    body: IR
+  ): Unit = {
+    requireJavaIdentifier(name)
+
+    val typeParameters = typeParamStrs.map(IRParser.parseType).toFastIndexedSeq
+    val valueParameterTypes = argTypeStrs.map(IRParser.parseType).toFastIndexedSeq
+    userAddedFunctions += ((name, (body.typ, typeParameters, valueParameterTypes)))
+    addIR(name,
+      typeParameters,
+      valueParameterTypes, 
+      IRParser.parseType(returnType), 
+      false, 
+      { (_, args) =>
+        Subst(body,
+          BindingEnv(Env[IR](argNames.zip(args): _*)))
+      })
+  }
+
   def pyRegisterIR(
     name: String,
     typeParamStrs: java.util.ArrayList[String],
@@ -76,7 +100,10 @@ object IRFunctionRegistry {
     userAddedFunctions += ((name, (body.typ, typeParameters, valueParameterTypes)))
     addIR(name,
       typeParameters,
-      valueParameterTypes, IRParser.parseType(returnType), false, { (_, args) =>
+      valueParameterTypes, 
+      IRParser.parseType(returnType), 
+      false, 
+      { (_, args) =>
         Subst(body,
           BindingEnv(Env[IR](argNames.asScala.zip(args): _*)))
       })

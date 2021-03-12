@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets
 import java.util.concurrent._
 
 import is.hail.HailContext
+import is.hail.expr.ir.functions.IRFunctionRegistry
 import is.hail.annotations._
 import is.hail.asm4s._
 import is.hail.backend.{Backend, BackendContext, BroadcastValue, HailTaskContext}
@@ -378,14 +379,21 @@ class ServiceBackend() extends Backend {
   private[this] def registerFunction(
       ctx: ExecuteContext,
       name: String,
-      typeParameters: java.util.ArrayList[String],
-      argumentNames: java.util.ArrayList[String],
-      argumentTypes: java.util.ArrayList[String],
+      typeParameters: Array[String],
+      argumentNames: Array[String],
+      argumentTypes: Array[String],
       returnType: String,
-      body: IR,
-    ): Unit = {
- 
-    registerIR(name, valueParameterTypes=argumentTypes, returnType=returnType, typeParameters=typeParameters)(body)
+      body: IR): Unit = {
+
+    IRFunctionRegistry.registerIR(
+      name, 
+      typeParameters,
+      argumentNames,
+      argumentTypes,
+      returnType, 
+      body
+    )
+    // registerIR(name, valueParameterTypes=argumentTypes, returnType=returnType, typeParameters=typeParameters)(body)
   }
 
   def registerFunction(
@@ -394,24 +402,18 @@ class ServiceBackend() extends Backend {
       billingProject: String,
       bucket: String,
       name: String,
-      typeParameters: java.util.ArrayList[String],
-      argumentNames: java.util.ArrayList[String],
-      argumentTypes: java.util.ArrayList[String],
+      typeParameters: Array[String],
+      argumentNames: Array[String],
+      argumentTypes: Array[String],
       returnType: String,
-      body: String,
-    ): Unit = {
+      body: String): Unit = {
 
-    userContext(username, timer) { ctx =>
-      ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
-      registerFunction(
-        ctx,
-        name,
-        typeParameters,
-        argumentNames,
-        argumentTypes,
-        returnType,
-        IRParser.parse_value_ir(ctx, body),
-      )
+    ExecutionTimer.logTime("ServiceBackend.registerFunction") { timer =>
+      userContext(username, timer) { ctx =>
+        ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
+        val bodyIr = IRParser.parse_value_ir(ctx, body)
+        registerFunction(ctx, name, typeParameters, argumentNames, argumentTypes, returnType, bodyIr)
+      }
     }
   }
 
@@ -718,11 +720,10 @@ class ServiceBackendSocketAPI(backend: ServiceBackend, socket: Socket) extends T
           val returnType = readString()
           val body = readString()
           try {
-            val result = backend.registerFunction(
-              sername, sessionId, billingProject, bucket, name,
+            backend.registerFunction(
+              username, sessionId, billingProject, bucket, name,
               typeParameters, argumentNames, argumentTypes, returnType, body)
             writeBool(true)
-            writeString(result)
           } catch {
             case t: Throwable =>
               writeBool(false)
