@@ -200,9 +200,9 @@ class ServiceBackend(Backend):
             billing_project=self._billing_project,
             bucket=self._bucket,
             name=name,
-            type_parameters=','join([ta._parsable_string() for ta in type_parameters]),
-            argument_names=','join(argument_names),
-            argument_types=','join(pt._parsable_string() for pt in argument_types]),
+            type_parameters=','.join([ta._parsable_string() for ta in type_parameters]),
+            argument_names=','.join(argument_names),
+            argument_types=','.join(pt._parsable_string() for pt in argument_types]),
             return_type=return_type._parsable_string(),
             body=body,
         )
