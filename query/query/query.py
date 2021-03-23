@@ -73,6 +73,8 @@ def blocking_execute(userdata, body):
 
 def blocking_register_ir_function(userdata, body):
     with connect_to_java() as java:
+        log.info("blocking_register_ir_function userdata", userdata)
+        log.info("blocking_register_ir_function body", body)
         return java.register_ir_function(
             userdata['username'],
             userdata['session_id'],
@@ -175,7 +177,7 @@ async def execute(request, userdata):
 
 @routes.get('/api/v1alpha/register_ir_function')
 @rest_authenticated_users_only
-async def get_reference(request, userdata):  # pylint: disable=unused-argument
+async def register_ir_function(request, userdata):  # pylint: disable=unused-argument
     return await handle_ws_response(
         request,
         userdata,

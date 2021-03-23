@@ -63,7 +63,8 @@ class ServiceSocket:
             assert response.type == aiohttp.WSMsgType.TEXT
             result = json.loads(response.data)
             if result['status'] != 200:
-                raise FatalError(f'Error from server: {result["value"]}')
+                error = '\n'.join(result['value'])
+                raise FatalError(f'Error from server: {error}')
             return result['value']
 
     def request(self, endpoint, **data):

@@ -12,7 +12,7 @@ import is.hail.asm4s._
 import is.hail.backend.{Backend, BackendContext, BroadcastValue, HailTaskContext}
 import is.hail.expr.JSONAnnotationImpex
 import is.hail.expr.ir.lowering.{DArrayLowering, LowerDistributedSort, LoweringPipeline, TableStage, TableStageDependency}
-import is.hail.expr.ir.{Compile, ExecuteContext, IR, IRParser, Literal, MakeArray, MakeTuple, OwningTempFileManager, ShuffleRead, ShuffleWrite, SortField, ToStream}
+import is.hail.expr.ir.{Compile, ExecuteContext, IR, IRParser, Literal, MakeArray, MakeTuple, OwningTempFileManager, ShuffleRead, ShuffleWrite, SortField, ToStream, IRParserEnvironment}
 import is.hail.io.fs.GoogleStorageFS
 import is.hail.linalg.BlockMatrix
 import is.hail.rvd.RVDPartitioner
@@ -411,7 +411,13 @@ class ServiceBackend() extends Backend {
     ExecutionTimer.logTime("ServiceBackend.registerFunction") { timer =>
       userContext(username, timer) { ctx =>
         ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
-        val bodyIr = IRParser.parse_value_ir(ctx, body)
+        val env = IRParserEnvironment(ctx, refMap = Map(
+          "x" -> TInt32
+        ))
+
+        // bodyIr = IRParser.parse_value_ir(code, ref_map=dict(zip(argument_names, argument_types)), ir_map=r.jirs))
+        val bodyIr = IRParser.parse_value_ir(body, env)
+        // bodyIr = (_, x) => x
         registerFunction(ctx, name, typeParameters, argumentNames, argumentTypes, returnType, bodyIr)
       }
     }
