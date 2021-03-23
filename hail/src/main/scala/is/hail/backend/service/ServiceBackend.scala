@@ -402,23 +402,26 @@ class ServiceBackend() extends Backend {
       billingProject: String,
       bucket: String,
       name: String,
-      typeParameters: Array[String],
-      argumentNames: Array[String],
-      argumentTypes: Array[String],
-      returnType: String,
+      typeParamStrs: Array[String],
+      argNames: Array[String],
+      argTypeStrs: Array[String],
+      retType: String,
       body: String): Unit = {
 
     ExecutionTimer.logTime("ServiceBackend.registerFunction") { timer =>
       userContext(username, timer) { ctx =>
         ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
-        val env = IRParserEnvironment(ctx, refMap = Map(
-          "x" -> TInt32
-        ))
 
-        // bodyIr = IRParser.parse_value_ir(code, ref_map=dict(zip(argument_names, argument_types)), ir_map=r.jirs))
+        val typeParams = typeParamStrs.map(IRParser.parseType).toFastIndexedSeq
+        val argTypes = argTypeStrs.map(IRParser.parseType).toFastIndexedSeq
+
+        val env = IRParserEnvironment(
+          ctx,
+          refMap = (argNames zip argTypes).toMap
+        )
+
         val bodyIr = IRParser.parse_value_ir(body, env)
-        // bodyIr = (_, x) => x
-        registerFunction(ctx, name, typeParameters, argumentNames, argumentTypes, returnType, bodyIr)
+        IRFunctionRegistry.registerIR(name, typeParamStrs, argNames, argTypeStrs, retType, bodyIr)
       }
     }
   }

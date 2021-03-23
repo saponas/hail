@@ -3432,6 +3432,26 @@ class IRSuite extends HailSuite {
     assert(x2 == x)
   }
 
+  @Test def testParseFunction(): Unit = {
+    val name = "__uid_3"
+    val typeParamStrs = "".split(",")
+    val argNames = "__uid___uid_34,__uid___uid_35".split(",")
+    val argTypeStrs = "Int32,Int32".split(",")
+    val retType = "Int32"
+    val body = "(ApplyBinaryPrimOp `+` (Ref __uid___uid_34) (Ref __uid___uid_35))"
+
+    val typeParams = typeParamStrs.map(IRParser.parseType).toFastIndexedSeq
+    val argTypes = argTypeStrs.map(IRParser.parseType).toFastIndexedSeq
+
+    val env = IRParserEnvironment(
+      ctx,
+      refMap = (argNames zip argTypes).toMap
+    )
+
+    val bodyIr = IRParser.parse_value_ir(body, env)
+    IRFunctionRegistry.registerIR(name, typeParamStrs, argNames, argTypeStrs, retType, bodyIr)
+  }
+
   @Test(dataProvider = "tableIRs")
   def testTableIRParser(x: TableIR) {
     val s = Pretty(x, elideLiterals = false)

@@ -73,8 +73,8 @@ def blocking_execute(userdata, body):
 
 def blocking_register_ir_function(userdata, body):
     with connect_to_java() as java:
-        log.info("blocking_register_ir_function userdata", userdata)
-        log.info("blocking_register_ir_function body", body)
+        log.warn("blocking_register_ir_function userdata", userdata)
+        log.warn("blocking_register_ir_function body", body)
         return java.register_ir_function(
             userdata['username'],
             userdata['session_id'],
