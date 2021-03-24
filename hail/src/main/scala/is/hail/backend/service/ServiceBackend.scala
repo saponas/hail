@@ -419,15 +419,16 @@ class ServiceBackend() extends Backend {
       retType: String,
       body: String): Unit = {
 
-    var irr = IRFunctionRegistry.irRegistry
-    log.warn(s"registerFunction: irRegistry before = $irr")
+    var irrKeys = IRFunctionRegistry.irRegistry.keys
+    log.warn(s"registerFunction: irRegistry before = $irrKeys")
     ExecutionTimer.logTime("ServiceBackend.registerFunction") { timer =>
       userContext(username, timer) { ctx =>
         ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
         ServiceBackend.registerFunction(ctx, name, typeParamsStr, argNamesStr, argTypesStr, retType, body)
       }
     }
-    log.warn(s"registerFunction: irRegistry after = $irr")
+    irrKeys = IRFunctionRegistry.irRegistry.keys
+    log.warn(s"registerFunction: irRegistry after = $irrKeys")
   }
 
   def flags(): String = {
