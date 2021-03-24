@@ -72,7 +72,9 @@ object IRFunctionRegistry {
     requireJavaIdentifier(name)
 
     userAddedFunctions += ((name, (body.typ, typeParameters, valueParameterTypes)))
-    addIR(name,
+    log.warn(s"serviceBackendRegisterIR: irRegistry before = $irRegistry")
+    addIR(
+      name,
       typeParameters,
       valueParameterTypes,
       returnType,
@@ -81,6 +83,7 @@ object IRFunctionRegistry {
         Subst(body,
           BindingEnv(Env[IR](argNames.zip(args): _*)))
       })
+    log.warn(s"serviceBackendRegisterIR: irRegistry after = $irRegistry")
   }
 
   def pyRegisterIR(
@@ -161,6 +164,7 @@ object IRFunctionRegistry {
     typeParameters: Seq[Type],
     valueParameterTypes: Seq[Type]
   ): Option[(IRFunctionSignature, IRFunctionImplementation)] = {
+    log.warn(s"lookupIR: irRegistry = $irRegistry")
     irRegistry.getOrElse(name, Map.empty).filter { case ((typeParametersFound: Seq[Type], valueParameterTypesFound: Seq[Type], _, _), _) =>
       typeParametersFound.length == typeParameters.length && {
         typeParametersFound.foreach(_.clear())
