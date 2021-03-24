@@ -72,7 +72,6 @@ object IRFunctionRegistry {
     requireJavaIdentifier(name)
 
     userAddedFunctions += ((name, (body.typ, typeParameters, valueParameterTypes)))
-    log.warn(s"serviceBackendRegisterIR: irRegistry before = $irRegistry")
     addIR(
       name,
       typeParameters,
@@ -83,7 +82,6 @@ object IRFunctionRegistry {
         Subst(body,
           BindingEnv(Env[IR](argNames.zip(args): _*)))
       })
-    log.warn(s"serviceBackendRegisterIR: irRegistry after = $irRegistry")
   }
 
   def pyRegisterIR(
