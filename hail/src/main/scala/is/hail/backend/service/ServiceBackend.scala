@@ -376,25 +376,25 @@ class ServiceBackend() extends Backend {
     }
   }
 
-  private[this] def registerFunction(
-      ctx: ExecuteContext,
-      name: String,
-      typeParameters: Array[String],
-      argumentNames: Array[String],
-      argumentTypes: Array[String],
-      returnType: String,
-      body: IR): Unit = {
-
-    IRFunctionRegistry.registerIR(
-      name, 
-      typeParameters,
-      argumentNames,
-      argumentTypes,
-      returnType, 
-      body
-    )
-    // registerIR(name, valueParameterTypes=argumentTypes, returnType=returnType, typeParameters=typeParameters)(body)
-  }
+//  private[this] def registerFunction(
+//      ctx: ExecuteContext,
+//      name: String,
+//      typeParameters: Array[String],
+//      argumentNames: Array[String],
+//      argumentTypes: Array[String],
+//      returnType: String,
+//      body: IR): Unit = {
+//
+//    IRFunctionRegistry.serviceBackendRegisterIR(
+//      name,
+//      typeParams,
+//      argNames,
+//      argTypes,
+//      IRParser.parseType(retType),
+//      IRParser.parse_value_ir(body, env)
+//    )
+//    // registerIR(name, valueParameterTypes=argumentTypes, returnType=returnType, typeParameters=typeParameters)(body)
+//  }
 
   def registerFunction(
       username: String,
@@ -408,27 +408,33 @@ class ServiceBackend() extends Backend {
       retType: String,
       body: String): Unit = {
 
-    log.info("registerFunction name", name)
-    log.info("registerFunction typeParamStrs", typeParamStrs.toString)
-    log.info("registerFunction argNames", argNames.toString)
-    log.info("registerFunction argTypeStrs", argTypeStrs.toString)
-    log.info("registerFunction retType", retType)
-    log.info("registerFunction body", body)
+    log.info(s"registerFunction name: $name")
+    log.info(s"registerFunction typeParamStrs: $typeParamStrs")
+    log.info(s"registerFunction argNames: $argNames")
+    log.info(s"registerFunction argTypeStrs: $argTypeStrs")
+    log.info(s"registerFunction retType: $retType")
+    log.info(s"registerFunction body: $body")
 
     ExecutionTimer.logTime("ServiceBackend.registerFunction") { timer =>
       userContext(username, timer) { ctx =>
         ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
 
-        val typeParams = typeParamStrs.map(IRParser.parseType).toFastIndexedSeq
-        val argTypes = argTypeStrs.map(IRParser.parseType).toFastIndexedSeq
+        val typeParams = typeParamStrs.map(IRParser.parseType).toIndexedSeq
+        val argTypes = argTypeStrs.map(IRParser.parseType).toIndexedSeq
 
         val env = IRParserEnvironment(
           ctx,
           refMap = (argNames zip argTypes).toMap
         )
 
-        val bodyIr = IRParser.parse_value_ir(body, env)
-        IRFunctionRegistry.registerIR(name, typeParamStrs, argNames, argTypeStrs, retType, bodyIr)
+        IRFunctionRegistry.serviceBackendRegisterIR(
+          name,
+          typeParams,
+          argNames,
+          argTypes,
+          IRParser.parseType(retType),
+          IRParser.parse_value_ir(body, env)
+        )
       }
     }
   }
@@ -730,9 +736,12 @@ class ServiceBackendSocketAPI(backend: ServiceBackend, socket: Socket) extends T
           val billingProject = readString()
           val bucket = readString()
           val name = readString()
-          val typeParameters = readString().split(",")
-          val argumentNames = readString().split(",")
-          val argumentTypes = readString().split(",")
+          val typeParamsStr = readString()
+          val argNamesStr = readString()
+          val argTypesStr = readString()
+          val typeParameters = if (typeParamsStr.isEmpty) Array[String]() else typeParamsStr.split(",")
+          val argumentNames = if (argNamesStr.isEmpty) Array[String]() else argNamesStr.split(",")
+          val argumentTypes = if (argTypesStr.isEmpty) Array[String]() else argTypesStr.split(",")
           val returnType = readString()
           val body = readString()
           try {

@@ -61,23 +61,21 @@ object IRFunctionRegistry {
     m.update((typeParameters, valueParameterTypes, returnType, alwaysInline), f)
   }
 
-  def registerIR(
+  def serviceBackendRegisterIR(
     name: String,
-    typeParamStrs: Array[String],
-    argNames: Array[String],
-    argTypeStrs: Array[String],
-    returnType: String,
+    typeParameters: Seq[Type],
+    argNames: Seq[String],
+    valueParameterTypes: Seq[Type],
+    returnType: Type,
     body: IR
   ): Unit = {
     requireJavaIdentifier(name)
 
-    val typeParameters = typeParamStrs.map(IRParser.parseType).toFastIndexedSeq
-    val valueParameterTypes = argTypeStrs.map(IRParser.parseType).toFastIndexedSeq
     userAddedFunctions += ((name, (body.typ, typeParameters, valueParameterTypes)))
     addIR(name,
       typeParameters,
-      valueParameterTypes, 
-      IRParser.parseType(returnType), 
+      valueParameterTypes,
+      returnType,
       false, 
       { (_, args) =>
         Subst(body,
