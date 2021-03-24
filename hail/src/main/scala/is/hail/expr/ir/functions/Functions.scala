@@ -168,16 +168,20 @@ object IRFunctionRegistry {
     log.warn(s"lookupIR: looking for typeParameters = $typeParameters")
     log.warn(s"lookupIR: looking for valueParameterTypes = $valueParameterTypes")
 
-    irRegistry.getOrElse(name, Map.empty).filter { case ((typeParametersFound: Seq[Type], valueParameterTypesFound: Seq[Type], _, _), _) =>
-      typeParametersFound.length == typeParameters.length && {
-        log.warn(s"lookupIR: looking for typeParametersFound = $typeParametersFound")
-        typeParametersFound.foreach(_.clear())
-        (typeParametersFound, typeParameters).zipped.forall(_.unify(_))
-      } && valueParameterTypesFound.length == valueParameterTypes.length && {
-        log.warn(s"lookupIR: looking for valueParameterTypesFound = $valueParameterTypesFound")
-        valueParameterTypesFound.foreach(_.clear())
-        (valueParameterTypesFound, valueParameterTypes).zipped.forall(_.unify(_))
-      }
+    irRegistry.getOrElse(name, Map.empty).filter {
+      case ((typeParametersFound: Seq[Type], valueParameterTypesFound: Seq[Type], _, _), _) =>
+        typeParametersFound.length == typeParameters.length && {
+          log.warn(s"lookupIR: typeParametersFound = $typeParametersFound")
+          typeParametersFound.foreach(_.clear())
+          (typeParametersFound, typeParameters).zipped.forall(_.unify(_))
+        } && valueParameterTypesFound.length == valueParameterTypes.length && {
+          log.warn(s"lookupIR: valueParameterTypesFound = $valueParameterTypesFound")
+          valueParameterTypesFound.foreach(_.clear())
+          (valueParameterTypesFound, valueParameterTypes).zipped.forall(_.unify(_))
+        } || {
+          log.warn(s"lookupIR fail: typeParametersFound = $typeParametersFound")
+          log.warn(s"lookupIR fail: valueParameterTypesFound = $valueParameterTypesFound")
+        }
     }.toSeq match {
       case Seq() => None
       case Seq(kv) => Some(kv)
