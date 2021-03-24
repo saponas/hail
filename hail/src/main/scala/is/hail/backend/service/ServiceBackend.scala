@@ -408,6 +408,13 @@ class ServiceBackend() extends Backend {
       retType: String,
       body: String): Unit = {
 
+    log.info("registerFunction name", name)
+    log.info("registerFunction typeParamStrs", typeParamStrs.toString)
+    log.info("registerFunction argNames", argNames.toString)
+    log.info("registerFunction argTypeStrs", argTypeStrs.toString)
+    log.info("registerFunction retType", retType)
+    log.info("registerFunction body", body)
+
     ExecutionTimer.logTime("ServiceBackend.registerFunction") { timer =>
       userContext(username, timer) { ctx =>
         ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
