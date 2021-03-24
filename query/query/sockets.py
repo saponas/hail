@@ -219,14 +219,9 @@ class ServiceBackendSocketConnection:
         self.write_str(returnType)
         self.write_str(body)
         success = self.read_bool()
-        if success:
-            s = self.read_str()
-            try:
-                return json.loads(s)
-            except json.decoder.JSONDecodeError as err:
-                raise ValueError(f'could not decode {s}') from err
-        jstacktrace = self.read_str()
-        raise ValueError(jstacktrace)
+        if not success:
+            jstacktrace = self.read_str()
+            raise ValueError(jstacktrace)
 
     def flags(self):
         self.write_int(ServiceBackendSocketConnection.FLAGS)
