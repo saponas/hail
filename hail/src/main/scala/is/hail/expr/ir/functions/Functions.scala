@@ -162,12 +162,19 @@ object IRFunctionRegistry {
     typeParameters: Seq[Type],
     valueParameterTypes: Seq[Type]
   ): Option[(IRFunctionSignature, IRFunctionImplementation)] = {
-    log.warn(s"lookupIR: irRegistry = $irRegistry")
+    var irrKeys = irRegistry.keys
+    log.warn(s"lookupIR: irRegistry = $irrKeys")
+    log.warn(s"lookupIR: looking for name = $name")
+    log.warn(s"lookupIR: looking for typeParameters = $typeParameters")
+    log.warn(s"lookupIR: looking for valueParameterTypes = $valueParameterTypes")
+
     irRegistry.getOrElse(name, Map.empty).filter { case ((typeParametersFound: Seq[Type], valueParameterTypesFound: Seq[Type], _, _), _) =>
       typeParametersFound.length == typeParameters.length && {
+        log.warn(s"lookupIR: looking for typeParametersFound = $typeParametersFound")
         typeParametersFound.foreach(_.clear())
         (typeParametersFound, typeParameters).zipped.forall(_.unify(_))
       } && valueParameterTypesFound.length == valueParameterTypes.length && {
+        log.warn(s"lookupIR: looking for valueParameterTypesFound = $valueParameterTypesFound")
         valueParameterTypesFound.foreach(_.clear())
         (valueParameterTypesFound, valueParameterTypes).zipped.forall(_.unify(_))
       }
