@@ -195,11 +195,6 @@ class ServiceBackend(Backend):
     def register_ir_function(self, name, type_parameters, argument_names, argument_types, return_type, body):
         r = CSERenderer(stop_at_jir=True)
         body: str = r(body._ir)
-        print("body", body)
-        print("type_parameters", type_parameters)
-        print("argument_names", argument_names)
-        print("argument_types", argument_types)
-        print("return_type", return_type)
 
         return self.socket.request(
             'register_ir_function',
