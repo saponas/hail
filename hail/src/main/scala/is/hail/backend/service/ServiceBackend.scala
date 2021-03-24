@@ -408,6 +408,37 @@ class ServiceBackend() extends Backend {
   }
 
   def registerFunction(
+                        ctx: ExecuteContext,
+                        name: String,
+                        typeParamsStr: String,
+                        argNamesStr: String,
+                        argTypesStr: String,
+                        retType: String,
+                        body: String): Unit = {
+
+    val typeParamStrs = if (typeParamsStr.isEmpty) Array[String]() else typeParamsStr.split(",")
+    val argNames = if (argNamesStr.isEmpty) Array[String]() else argNamesStr.split(",")
+    val argTypeStrs = if (argTypesStr.isEmpty) Array[String]() else argTypesStr.split(",")
+
+    val typeParams = typeParamStrs.map(IRParser.parseType).toIndexedSeq
+    val argTypes = argTypeStrs.map(IRParser.parseType).toIndexedSeq
+
+    val env = IRParserEnvironment(
+      ctx,
+      refMap = (argNames zip argTypes).toMap
+    )
+
+    IRFunctionRegistry.serviceBackendRegisterIR(
+      name,
+      typeParams,
+      argNames,
+      argTypes,
+      IRParser.parseType(retType),
+      IRParser.parse_value_ir(body, env)
+    )
+  }
+
+  def registerFunction(
       username: String,
       sessionID: String,
       billingProject: String,
@@ -422,7 +453,7 @@ class ServiceBackend() extends Backend {
     ExecutionTimer.logTime("ServiceBackend.registerFunction") { timer =>
       userContext(username, timer) { ctx =>
         ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
-        ServiceBackend.registerFunction(ctx, name, typeParamsStr, argNamesStr, argTypesStr, retType, body)
+        registerFunction(ctx, name, typeParamsStr, argNamesStr, argTypesStr, retType, body)
       }
     }
   }
