@@ -157,6 +157,37 @@ object ServiceBackend {
   def apply(): ServiceBackend = {
     new ServiceBackend()
   }
+
+  def registerFunction(
+      ctx: ExecuteContext,
+      name: String,
+      typeParamsStr: String,
+      argNamesStr: String,
+      argTypesStr: String,
+      retType: String,
+      body: String): Unit = {
+
+    val typeParamStrs = if (typeParamsStr.isEmpty) Array[String]() else typeParamsStr.split(",")
+    val argNames = if (argNamesStr.isEmpty) Array[String]() else argNamesStr.split(",")
+    val argTypeStrs = if (argTypesStr.isEmpty) Array[String]() else argTypesStr.split(",")
+
+    val typeParams = typeParamStrs.map(IRParser.parseType).toIndexedSeq
+    val argTypes = argTypeStrs.map(IRParser.parseType).toIndexedSeq
+
+    val env = IRParserEnvironment(
+      ctx,
+      refMap = (argNames zip argTypes).toMap
+    )
+
+    IRFunctionRegistry.serviceBackendRegisterIR(
+      name,
+      typeParams,
+      argNames,
+      argTypes,
+      IRParser.parseType(retType),
+      IRParser.parse_value_ir(body, env)
+    )
+  }
 }
 
 class User(
@@ -376,65 +407,22 @@ class ServiceBackend() extends Backend {
     }
   }
 
-//  private[this] def registerFunction(
-//      ctx: ExecuteContext,
-//      name: String,
-//      typeParameters: Array[String],
-//      argumentNames: Array[String],
-//      argumentTypes: Array[String],
-//      returnType: String,
-//      body: IR): Unit = {
-//
-//    IRFunctionRegistry.serviceBackendRegisterIR(
-//      name,
-//      typeParams,
-//      argNames,
-//      argTypes,
-//      IRParser.parseType(retType),
-//      IRParser.parse_value_ir(body, env)
-//    )
-//    // registerIR(name, valueParameterTypes=argumentTypes, returnType=returnType, typeParameters=typeParameters)(body)
-//  }
-
   def registerFunction(
       username: String,
       sessionID: String,
       billingProject: String,
       bucket: String,
       name: String,
-      typeParamStrs: Array[String],
-      argNames: Array[String],
-      argTypeStrs: Array[String],
+      typeParamsStr: String,
+      argNamesStr: String,
+      argTypesStr: String,
       retType: String,
       body: String): Unit = {
-
-    log.info(s"registerFunction name: $name")
-    log.info(s"registerFunction typeParamStrs: $typeParamStrs")
-    log.info(s"registerFunction argNames: $argNames")
-    log.info(s"registerFunction argTypeStrs: $argTypeStrs")
-    log.info(s"registerFunction retType: $retType")
-    log.info(s"registerFunction body: $body")
 
     ExecutionTimer.logTime("ServiceBackend.registerFunction") { timer =>
       userContext(username, timer) { ctx =>
         ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
-
-        val typeParams = typeParamStrs.map(IRParser.parseType).toIndexedSeq
-        val argTypes = argTypeStrs.map(IRParser.parseType).toIndexedSeq
-
-        val env = IRParserEnvironment(
-          ctx,
-          refMap = (argNames zip argTypes).toMap
-        )
-
-        IRFunctionRegistry.serviceBackendRegisterIR(
-          name,
-          typeParams,
-          argNames,
-          argTypes,
-          IRParser.parseType(retType),
-          IRParser.parse_value_ir(body, env)
-        )
+        ServiceBackend.registerFunction(ctx, name, typeParamsStr, argNamesStr, argTypesStr, retType, body)
       }
     }
   }
@@ -736,18 +724,15 @@ class ServiceBackendSocketAPI(backend: ServiceBackend, socket: Socket) extends T
           val billingProject = readString()
           val bucket = readString()
           val name = readString()
-          val typeParamsStr = readString()
-          val argNamesStr = readString()
-          val argTypesStr = readString()
-          val typeParameters = if (typeParamsStr.isEmpty) Array[String]() else typeParamsStr.split(",")
-          val argumentNames = if (argNamesStr.isEmpty) Array[String]() else argNamesStr.split(",")
-          val argumentTypes = if (argTypesStr.isEmpty) Array[String]() else argTypesStr.split(",")
+          val typeParams = readString()
+          val argNames = readString()
+          val argTypes = readString()
           val returnType = readString()
           val body = readString()
           try {
             backend.registerFunction(
               username, sessionId, billingProject, bucket, name,
-              typeParameters, argumentNames, argumentTypes, returnType, body)
+              typeParams, argNames, argTypes, returnType, body)
             writeBool(true)
           } catch {
             case t: Throwable =>
