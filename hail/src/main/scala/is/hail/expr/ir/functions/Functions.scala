@@ -170,8 +170,8 @@ object IRFunctionRegistry {
 
     irRegistry.getOrElse(name, Map.empty).filter {
       case ((typeParametersFound: Seq[Type], valueParameterTypesFound: Seq[Type], _, _), _) => {
-        log.warn(s"lookupIR fail: typeParametersFound = $typeParametersFound")
-        log.warn(s"lookupIR fail: valueParameterTypesFound = $valueParameterTypesFound")
+        log.warn(s"lookupIR: typeParametersFound = $typeParametersFound")
+        log.warn(s"lookupIR: valueParameterTypesFound = $valueParameterTypesFound")
         typeParametersFound.length == typeParameters.length && {
           typeParametersFound.foreach(_.clear())
           (typeParametersFound, typeParameters).zipped.forall(_.unify(_))

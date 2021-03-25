@@ -13,6 +13,7 @@ import is.hail.expr.JSONAnnotationImpex
 import is.hail.expr.ir.lowering.{DArrayLowering, LowerDistributedSort, LoweringPipeline, TableStage, TableStageDependency}
 import is.hail.expr.ir.{Compile, ExecuteContext, IR, IRParser, Literal, MakeArray, MakeTuple, OwningTempFileManager, ShuffleRead, ShuffleWrite, SortField, ToStream, IRParserEnvironment}
 import is.hail.io.fs.GoogleStorageFS
+import is.hail.io.fs.FS
 import is.hail.linalg.BlockMatrix
 import is.hail.rvd.RVDPartitioner
 import is.hail.services._
@@ -28,15 +29,15 @@ import org.apache.commons.io.IOUtils
 import org.apache.log4j.Logger
 import org.apache.spark.sql.Row
 import org.json4s.JsonAST._
-import org.json4s.jackson.JsonMethods
+import org.json4s.jackson.{JsonMethods, Serialization}
 import org.json4s.{DefaultFormats, Formats}
 import org.newsclub.net.unix.{AFUNIXSocket, AFUNIXSocketAddress, AFUNIXServerSocket}
-
 
 import java.nio.charset.Charset
 import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.annotation.switch
+
 
 class ServiceTaskContext(val partitionId: Int) extends HailTaskContext {
   override type BackendType = ServiceBackend
@@ -194,6 +195,31 @@ class User(
   val username: String,
   val tmpdir: String,
   val fs: GoogleStorageFS)
+
+class SerializedFunction(
+  val name: String,
+  val typeParamsStr: String,
+  val argNamesStr: String,
+  val argTypesStr: String,
+  val retType: String,
+  val body: String) {
+
+//  def getPath(): String {
+//    "functions/" + name + "--" + argTypesStr.replace(',', '-') + ".json"
+//  }
+//
+//  def serialize(fs: FS): String {
+//    using(ctx.fs.create(getPath()) { out =>
+//      Serialization.write(this, out)
+//    }
+//  }
+//
+//  def deserialize(fs: FS): SerializedFunction {
+//    using(fs.open(getPath))) { is =>
+//      Serialization.read[SerializedFunction](is)
+//    }
+//  }
+}
 
 class ServiceBackend() extends Backend {
   import ServiceBackend.log
@@ -394,6 +420,20 @@ class ServiceBackend() extends Backend {
         log.info(s"executing: ${token}")
         ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
 
+        type FuncMap = mutable.Map[String, SerializedFunction]
+        var funcMap: FuncMap = new mutable.HashMap()
+        val funcsPath = s"gs://${ bucket }/tmp/hail/query/user-functions.json"
+        if (ctx.fs.exists(funcsPath))
+          using(ctx.fs.open(funcsPath)) { is =>
+            implicit val formats = DefaultFormats
+            funcMap = Serialization.read[FuncMap](is)
+          }
+        var irrKeys = IRFunctionRegistry.irRegistry.keys
+        log.warn(s"execute: irRegistry before = $irrKeys")
+        for ((name, f) <- funcMap)
+          ServiceBackend.registerFunction(ctx, f.name, f.typeParamsStr, f.argNamesStr, f.argTypesStr, f.retType, f.body)
+        log.warn(s"execute: irRegistry after = $irrKeys")
+
         execute(ctx, IRParser.parse_value_ir(ctx, code)) match {
           case Some((v, t)) =>
             JsonMethods.compact(
@@ -421,14 +461,27 @@ class ServiceBackend() extends Backend {
 
     var irrKeys = IRFunctionRegistry.irRegistry.keys
     log.warn(s"registerFunction: irRegistry before = $irrKeys")
+    type FuncMap = mutable.Map[String, SerializedFunction]
     ExecutionTimer.logTime("ServiceBackend.registerFunction") { timer =>
       userContext(username, timer) { ctx =>
+        var funcMap: FuncMap = new mutable.HashMap()
+        val funcsPath = s"gs://${ bucket }/tmp/hail/query/user-functions.json"
+        implicit val formats = DefaultFormats
+        if (ctx.fs.exists(funcsPath))
+          using(ctx.fs.open(funcsPath)) { is =>
+            funcMap = Serialization.read[FuncMap](is)
+          }
+        val func = new SerializedFunction(name, typeParamsStr, argNamesStr, argTypesStr, retType, body)
+        funcMap.update(name, func)
+        using(ctx.fs.create(funcsPath)) { out =>
+          Serialization.write(funcMap, out)
+        }
 //        ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
-        ServiceBackend.registerFunction(ctx, name, typeParamsStr, argNamesStr, argTypesStr, retType, body)
+//        ServiceBackend.registerFunction(ctx, name, typeParamsStr, argNamesStr, argTypesStr, retType, body)
       }
     }
-    irrKeys = IRFunctionRegistry.irRegistry.keys
-    log.warn(s"registerFunction: irRegistry after = $irrKeys")
+//    irrKeys = IRFunctionRegistry.irRegistry.keys
+//    log.warn(s"registerFunction: irRegistry after = $irrKeys")
   }
 
   def flags(): String = {
