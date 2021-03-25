@@ -196,14 +196,6 @@ class User(
   val tmpdir: String,
   val fs: GoogleStorageFS)
 
-class SerializedFunction(
-  val name: String,
-  val typeParamsStr: String,
-  val argNamesStr: String,
-  val argTypesStr: String,
-  val retType: String,
-  val body: String) {
-
 //  def getPath(): String {
 //    "functions/" + name + "--" + argTypesStr.replace(',', '-') + ".json"
 //  }
@@ -219,7 +211,7 @@ class SerializedFunction(
 //      Serialization.read[SerializedFunction](is)
 //    }
 //  }
-}
+//}
 
 class ServiceBackend() extends Backend {
   import ServiceBackend.log
@@ -414,26 +406,38 @@ class ServiceBackend() extends Backend {
     }
   }
 
+  case class SerializedFunction(
+    val name: String,
+    val typeParamsStr: String,
+    val argNamesStr: String,
+    val argTypesStr: String,
+    val retType: String,
+    val body: String)
+
+  type SerializedFuncMap = mutable.Map[String, SerializedFunction]
+
+  val funcsPath = s"gs://${ bucket }/tmp/hail/query/user-functions.json"
+
+  def registerUserFunctions(ctx: ExecuteContext): FuncMap = {
+    var funcMap: SerializedFuncMap = new mutable.HashMap()
+    if (ctx.fs.exists(funcsPath))
+      using(ctx.fs.open(funcsPath)) { is =>
+        implicit val formats = DefaultFormats
+        funcMap = Serialization.read[SerializedFuncMap](is)
+      }
+    var irrKeys = IRFunctionRegistry.irRegistry.keys
+    log.warn(s"execute: irRegistry before = $irrKeys")
+    for ((name, f) <- funcMap)
+      ServiceBackend.registerFunction(ctx, f.name, f.typeParamsStr, f.argNamesStr, f.argTypesStr, f.retType, f.body)
+    log.warn(s"execute: irRegistry after = $irrKeys")
+  }
+
   def execute(username: String, sessionID: String, billingProject: String, bucket: String, code: String, token: String): String = {
     ExecutionTimer.logTime("ServiceBackend.execute") { timer =>
       userContext(username, timer) { ctx =>
         log.info(s"executing: ${token}")
         ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
-
-        type FuncMap = mutable.Map[String, SerializedFunction]
-        var funcMap: FuncMap = new mutable.HashMap()
-        val funcsPath = s"gs://${ bucket }/tmp/hail/query/user-functions.json"
-        if (ctx.fs.exists(funcsPath))
-          using(ctx.fs.open(funcsPath)) { is =>
-            implicit val formats = DefaultFormats
-            funcMap = Serialization.read[FuncMap](is)
-          }
-        var irrKeys = IRFunctionRegistry.irRegistry.keys
-        log.warn(s"execute: irRegistry before = $irrKeys")
-        for ((name, f) <- funcMap)
-          ServiceBackend.registerFunction(ctx, f.name, f.typeParamsStr, f.argNamesStr, f.argTypesStr, f.retType, f.body)
-        log.warn(s"execute: irRegistry after = $irrKeys")
-
+        registerUserFunctions()
         execute(ctx, IRParser.parse_value_ir(ctx, code)) match {
           case Some((v, t)) =>
             JsonMethods.compact(
@@ -464,12 +468,11 @@ class ServiceBackend() extends Backend {
     type FuncMap = mutable.Map[String, SerializedFunction]
     ExecutionTimer.logTime("ServiceBackend.registerFunction") { timer =>
       userContext(username, timer) { ctx =>
-        var funcMap: FuncMap = new mutable.HashMap()
-        val funcsPath = s"gs://${ bucket }/tmp/hail/query/user-functions.json"
+        var funcMap: SerializedFuncMap = new mutable.HashMap()
         implicit val formats = DefaultFormats
         if (ctx.fs.exists(funcsPath))
           using(ctx.fs.open(funcsPath)) { is =>
-            funcMap = Serialization.read[FuncMap](is)
+            funcMap = Serialization.read[SerializedFuncMap](is)
           }
         val func = new SerializedFunction(name, typeParamsStr, argNamesStr, argTypesStr, retType, body)
         funcMap.update(name, func)
