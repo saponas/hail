@@ -423,7 +423,7 @@ class ServiceBackend() extends Backend {
     log.warn(s"registerFunction: irRegistry before = $irrKeys")
     ExecutionTimer.logTime("ServiceBackend.registerFunction") { timer =>
       userContext(username, timer) { ctx =>
-        ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
+//        ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
         ServiceBackend.registerFunction(ctx, name, typeParamsStr, argNamesStr, argTypesStr, retType, body)
       }
     }
