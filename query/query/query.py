@@ -13,14 +13,12 @@ from hailtop.utils import blocking_to_async, retry_transient_errors
 from hailtop.config import get_deploy_config
 from hailtop.tls import internal_server_ssl_context
 from hailtop.hail_logging import AccessLogger
-from hailtop.hailctl import version
+from hailtop import version
 from gear import (
     setup_aiohttp_session,
     rest_authenticated_users_only,
     rest_authenticated_developers_only,
 )
-
-from .sockets import connect_to_java
 
 from .sockets import connect_to_java
 
@@ -268,6 +266,11 @@ async def set_flag(request, userdata):  # pylint: disable=unused-argument
     return web.json_response(jresp)
 
 
+@routes.get('/api/v1alpha/version')
+async def rest_get_version(request):  # pylint: disable=W0613
+    return web.Response(text=version())
+
+
 async def on_startup(app):
     thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=16)
     app['thread_pool'] = thread_pool
@@ -288,15 +291,11 @@ async def on_cleanup(app):
     )
 
 
-async def on_shutdown(app):
+async def on_shutdown(_):
     # Filter the asyncio.current_task(), because if we await
     # the current task we'll end up in a deadlock
-    remaining_tasks = [
-        t for t in asyncio.all_tasks() if t is not asyncio.current_task()
-    ]
-    log.info(
-        f"On shutdown request received, with {len(remaining_tasks)} remaining tasks"
-    )
+    remaining_tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    log.info(f"On shutdown request received, with {len(remaining_tasks)} remaining tasks")
     await asyncio.wait(*remaining_tasks)
     log.info("All tasks on shutdown have completed")
 

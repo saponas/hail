@@ -30,6 +30,15 @@ deploy_config = get_deploy_config()
 routes = web.RouteTableDef()
 
 
+@routes.get('')
+@routes.get('/')
+@monitor_endpoint
+@web_authenticated_developers_only()
+async def index(request, userdata):  # pylint: disable=unused-argument
+    # Redirect to /batches.
+    return web.HTTPFound(deploy_config.external_url('ci', '/batches'))
+
+
 @routes.get('/batches')
 @monitor_endpoint
 @web_authenticated_developers_only()
@@ -72,11 +81,6 @@ async def get_job(request, userdata):
         'attempts': await job.attempts(),
     }
     return await render_template('ci', request, userdata, 'job.html', page_context)
-
-
-@routes.get('/healthcheck')
-async def healthcheck(request):  # pylint: disable=unused-argument
-    return web.Response(status=200)
 
 
 @routes.post('/api/v1alpha/dev_deploy_branch')

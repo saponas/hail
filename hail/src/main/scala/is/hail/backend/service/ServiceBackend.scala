@@ -4,7 +4,6 @@ import java.io._
 import java.net._
 import java.nio.charset.StandardCharsets
 import java.util.concurrent._
-
 import is.hail.HailContext
 import is.hail.expr.ir.functions.IRFunctionRegistry
 import is.hail.annotations._
@@ -34,6 +33,7 @@ import org.json4s.{DefaultFormats, Formats}
 import org.newsclub.net.unix.{AFUNIXSocket, AFUNIXSocketAddress, AFUNIXServerSocket}
 
 
+import java.nio.charset.Charset
 import scala.collection.mutable
 import scala.reflect.ClassTag
 import scala.annotation.switch
@@ -90,7 +90,7 @@ object Worker {
 
     val fs = retryTransientErrors {
       using(new FileInputStream(s"$scratchDir/gsa-key/key.json")) { is =>
-        new GoogleStorageFS(IOUtils.toString(is))
+        new GoogleStorageFS(IOUtils.toString(is, Charset.defaultCharset()))
       }
     }
 
