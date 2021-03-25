@@ -437,7 +437,7 @@ class ServiceBackend() extends Backend {
       userContext(username, timer) { ctx =>
         log.info(s"executing: ${token}")
         ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
-        registerUserFunctions()
+//        registerUserFunctions()
         execute(ctx, IRParser.parse_value_ir(ctx, code)) match {
           case Some((v, t)) =>
             JsonMethods.compact(
