@@ -417,12 +417,12 @@ class ServiceBackend() extends Backend {
 
   type SerializedFuncMap = mutable.Map[String, SerializedFunction]
 
-  val funcsPath = s"gs://${ bucket }/tmp/hail/query/user-functions.json"
+  def funcsPath(bucket: String) = s"gs://${ bucket }/tmp/hail/query/user-functions.json"
 
-  def registerUserFunctions(ctx: ExecuteContext): FuncMap = {
+  def registerUserFunctions(ctx: ExecuteContext, bucket: String): Unit = {
     var funcMap: SerializedFuncMap = new mutable.HashMap()
-    if (ctx.fs.exists(funcsPath))
-      using(ctx.fs.open(funcsPath)) { is =>
+    if (ctx.fs.exists(funcsPath(bucket)))
+      using(ctx.fs.open(funcsPath(bucket))) { is =>
         implicit val formats = DefaultFormats
         funcMap = Serialization.read[SerializedFuncMap](is)
       }
@@ -471,13 +471,13 @@ class ServiceBackend() extends Backend {
       userContext(username, timer) { ctx =>
         var funcMap: SerializedFuncMap = new mutable.HashMap()
         implicit val formats = DefaultFormats
-        if (ctx.fs.exists(funcsPath))
-          using(ctx.fs.open(funcsPath)) { is =>
+        if (ctx.fs.exists(funcsPath(bucket)))
+          using(ctx.fs.open(funcsPath(bucket))) { is =>
             funcMap = Serialization.read[SerializedFuncMap](is)
           }
         val func = new SerializedFunction(name, typeParamsStr, argNamesStr, argTypesStr, retType, body)
         funcMap.update(name, func)
-        using(ctx.fs.create(funcsPath)) { out =>
+        using(ctx.fs.create(funcsPath(bucket))) { out =>
           Serialization.write(funcMap, out)
         }
 //        ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
