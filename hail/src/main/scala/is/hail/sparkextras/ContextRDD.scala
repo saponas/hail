@@ -395,6 +395,9 @@ class ContextRDD[T: ClassTag](
   private[this] def onRDD[U: ClassTag](
     f: RDD[RVDContext => Iterator[T]] => RDD[RVDContext => Iterator[U]]
   ): ContextRDD[U] = new ContextRDD(f(rdd))
+
+  def persist: ContextRDD[T] =
+    new ContextRDD(rdd.persist())
 }
 
 private class CRDDCoalescer(partEnds: Array[Int]) extends PartitionCoalescer with Serializable {
