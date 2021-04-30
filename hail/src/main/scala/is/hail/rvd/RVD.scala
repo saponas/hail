@@ -769,12 +769,11 @@ class RVD(
   def persist(ctx: ExecuteContext, level: StorageLevel): RVD = {
     val enc = TypedCodecSpec(rowPType, BufferSpec.memorySpec)
     val persistedRDD = stabilize(ctx, enc).persist(level)
-    println("forcing persist() through count()")
-    val count = persistedRDD.count()
-    println("result: " + count)
     val (newRowPType, iterationRDD) = destabilize(ctx, persistedRDD, enc)
+    println("forcing iterationRDD.persist()")
+    val iterationRDDPersisted = iterationRDD.persist()
 
-    new RVD(RVDType(newRowPType, typ.key), partitioner, iterationRDD) {
+    new RVD(RVDType(newRowPType, typ.key), partitioner, iterationRDDPersisted) {
       override def storageLevel: StorageLevel = persistedRDD.getStorageLevel
 
       override def persist(ctx: ExecuteContext, newLevel: StorageLevel): RVD = {
