@@ -771,7 +771,7 @@ class RVD(
     val persistedRDD = stabilize(ctx, enc).persist(level)
     val (newRowPType, iterationRDD) = destabilize(ctx, persistedRDD, enc)
     println("forcing iterationRDD.persist()")
-    val iterationRDDPersisted = iterationRDD.persist()
+    val iterationRDDPersisted = iterationRDD.persist
 
     new RVD(RVDType(newRowPType, typ.key), partitioner, iterationRDDPersisted) {
       override def storageLevel: StorageLevel = persistedRDD.getStorageLevel
