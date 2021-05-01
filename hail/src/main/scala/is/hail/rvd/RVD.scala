@@ -767,6 +767,10 @@ class RVD(
   def cache(ctx: ExecuteContext): RVD = persist(ctx, StorageLevel.MEMORY_ONLY)
 
   def persist(ctx: ExecuteContext, level: StorageLevel): RVD = {
+    println("*** RVD.persist")
+    new RVD(typ, partitioner, new ContextRDD(crdd.rdd.persist()))
+  }
+/*
     val enc = TypedCodecSpec(rowPType, BufferSpec.memorySpec)
     val persistedRDD = stabilize(ctx, enc).persist(level)
     val (newRowPType, iterationRDD) = destabilize(ctx, persistedRDD, enc)
@@ -791,6 +795,7 @@ class RVD(
       }
     }
   }
+*/
 
   def unpersist(): RVD = this
 
