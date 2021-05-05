@@ -1,5 +1,5 @@
 import os
-from typing import Tuple, Any, Set, Optional, Mapping, Dict, AsyncIterator, cast, Type, Iterator, List
+from typing import Tuple, Any, Set, Optional, MutableMapping, Dict, AsyncIterator, cast, Type, Iterator, List
 from types import TracebackType
 import collections
 from multidict import CIMultiDictProxy  # pylint: disable=unused-import
@@ -15,14 +15,14 @@ from hailtop.aiotools import (
     FileStatus, FileListEntry, ReadableStream, WritableStream, AsyncFS,
     FeedableAsyncIterable, FileAndDirectoryError, MultiPartCreate)
 
-from hailtop.aiogoogle.auth import Session
+from hailtop.aiogoogle.auth import BaseSession
 from .base_client import BaseClient
 
 log = logging.getLogger(__name__)
 
 
 class PageIterator:
-    def __init__(self, client: 'BaseClient', path: str, request_kwargs: Mapping[str, Any]):
+    def __init__(self, client: 'BaseClient', path: str, request_kwargs: MutableMapping[str, Any]):
         if 'params' in request_kwargs:
             request_params = request_kwargs['params']
             del request_kwargs['params']
@@ -142,7 +142,7 @@ class _TaskManager:
         self._coro = coro
         self._task = None
 
-    async def __aenter__(self) -> '_TaskManager':
+    async def __aenter__(self) -> asyncio.Task:
         self._task = asyncio.create_task(self._coro)
         return self._task
 
@@ -164,7 +164,7 @@ class _TaskManager:
 
 
 class ResumableInsertObjectStream(WritableStream):
-    def __init__(self, session: Session, session_url: str, chunk_size: int):
+    def __init__(self, session: BaseSession, session_url: str, chunk_size: int):
         super().__init__()
         self._session = session
         self._session_url = session_url
@@ -328,7 +328,7 @@ class StorageClient(BaseClient):
     # docs:
     # https://cloud.google.com/storage/docs/json_api/v1
 
-    async def insert_object(self, bucket: str, name: str, **kwargs) -> InsertObjectStream:
+    async def insert_object(self, bucket: str, name: str, **kwargs) -> WritableStream:
         assert name
         # Insert an object.  See:
         # https://cloud.google.com/storage/docs/json_api/v1/objects/insert
@@ -427,7 +427,7 @@ class GoogleStorageFileListEntry(FileListEntry):
         assert url.endswith('/') == (items is None), f'{url} {items}'
         self._url = url
         self._items = items
-        self._status = None
+        self._status: Optional[GetObjectFileStatus] = None
 
     def name(self) -> str:
         parsed = urllib.parse.urlparse(self._url)
@@ -496,7 +496,6 @@ class GoogleStorageMultiPartCreate(MultiPartCreate):
                         exc_val: Optional[BaseException],
                         exc_tb: Optional[TracebackType]) -> None:
         async with OnlineBoundedGather2(self._sema) as pool:
-            cleanup_tasks = []
             try:
                 if exc_val is not None:
                     return
@@ -535,20 +534,13 @@ class GoogleStorageMultiPartCreate(MultiPartCreate):
                     await self._compose(chunk_names, dest_name)
 
                     for n in chunk_names:
-                        cleanup_tasks.append(
-                            await pool.call(self._fs._remove_doesnt_exist_ok, f'gs://{self._bucket}/{n}'))
+                        await pool.call(self._fs._remove_doesnt_exist_ok, f'gs://{self._bucket}/{n}')
 
                 await tree_compose(
                     [self._part_name(i) for i in range(self._num_parts)],
                     self._dest_name)
             finally:
                 await self._fs.rmtree(self._sema, f'gs://{self._bucket}/{self._dest_dirname}_/{self._token}')
-                # after the rmtree, all temporary files should be gone
-                # cancel any cleanup tasks that are still running
-                # exiting the pool will wait for everything to finish
-                for t in cleanup_tasks:
-                    if not t.done():
-                        t.cancel()
 
 
 class GoogleStorageAsyncFS(AsyncFS):
@@ -754,4 +746,4 @@ class GoogleStorageAsyncFS(AsyncFS):
 
     async def close(self) -> None:
         await self._storage_client.close()
-        self._storage_client = None
+        del self._storage_client

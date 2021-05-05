@@ -27,6 +27,8 @@ spec:
             - /controller.sh
 {% endif %}
             - java
+            - -XX:ErrorFile=hs_err.log
+            - '-XX:OnError=cat hs_err.log >&2'
             - -cp
             - /usr/local/lib/python3.7/dist-packages/pyspark/jars/*:/hail.jar
             - is.hail.services.shuffler.server.ShuffleServer
@@ -61,3 +63,18 @@ spec:
          secret:
            optional: false
            secretName: ssl-config-shuffler
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shuffler
+  labels:
+    app: shuffler
+spec:
+  ports:
+  - name: shuffler
+    port: 443
+    protocol: TCP
+    targetPort: 443
+  selector:
+    app: shuffler

@@ -244,6 +244,7 @@ object SafeRow {
     a match {
       case _: UnsafeRow => false
       case _: UnsafeIndexedSeq => false
+      case _: UnsafeNDArray => false
 
       case r: Row =>
         r.toSeq.forall(isSafe)
@@ -251,6 +252,8 @@ object SafeRow {
         a.forall(isSafe)
       case i: Interval =>
         isSafe(i.start) && isSafe(i.end)
+      case nd: NDArray =>
+        nd.getRowMajorElements().forall(isSafe)
 
       case _ => true
     }
@@ -388,7 +391,7 @@ class UnsafeNDArray(val pnd: PNDArray, val region: Region, val ndAddr: Long) ext
   }
 }
 
-class SafeNDArray(val shape: IndexedSeq[Long], rowMajorElements: IndexedSeq[Annotation]) extends NDArray {
+case class SafeNDArray(val shape: IndexedSeq[Long], rowMajorElements: IndexedSeq[Annotation]) extends NDArray {
   assert(shape.foldLeft(1L)(_ * _) == rowMajorElements.size)
   override def getRowMajorElements: IndexedSeq[Annotation] = rowMajorElements
 

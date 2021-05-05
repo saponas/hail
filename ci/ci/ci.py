@@ -98,17 +98,14 @@ async def dev_deploy_branch(request, userdata):
     try:
         branch = FQBranch.from_short_str(params['branch'])
         steps = params['steps']
+        excluded_steps = params['excluded_steps']
     except Exception as e:
-        message = (
-            f'parameters are wrong; check the branch and steps syntax.\n\n{params}'
-        )
+        message = f'parameters are wrong; check the branch and steps syntax.\n\n{params}'
         log.info('dev deploy failed: ' + message, exc_info=True)
         raise web.HTTPBadRequest(text=message) from e
 
     gh = app['github_client']
-    request_string = (
-        f'/repos/{branch.repo.owner}/{branch.repo.name}/git/refs/heads/{branch.name}'
-    )
+    request_string = f'/repos/{branch.repo.owner}/{branch.repo.name}/git/refs/heads/{branch.name}'
 
     try:
         branch_gh_json = await gh.getitem(request_string)
@@ -123,13 +120,11 @@ async def dev_deploy_branch(request, userdata):
     batch_client = app['batch_client']
 
     try:
-        batch_id = await unwatched_branch.deploy(batch_client, steps)
+        batch_id = await unwatched_branch.deploy(batch_client, steps, excluded_steps=excluded_steps)
     except Exception as e:  # pylint: disable=broad-except
         message = traceback.format_exc()
         log.info('dev deploy failed: ' + message, exc_info=True)
-        raise web.HTTPBadRequest(
-            text=f'starting the deploy failed due to\n{message}'
-        ) from e
+        raise web.HTTPBadRequest(text=f'starting the deploy failed due to\n{message}') from e
     return web.json_response({'sha': sha, 'batch_id': batch_id})
 
 
@@ -138,11 +133,9 @@ async def dev_deploy_branch(request, userdata):
 @rest_authenticated_users_only
 async def prod_deploy(request, userdata):
     """Deploys the main branch to the production namespace ("default")."""
-
     # Only allow access by "ci" or dev accounts.
     if not (userdata['username'] == 'ci' or userdata['is_developer'] == 1):
         raise web.HTTPUnauthorized()
-
     app = request.app
     try:
         params = await request.json()
@@ -170,9 +163,7 @@ async def prod_deploy(request, userdata):
         log.info('prod deploy failed: ' + message, exc_info=True)
         raise web.HTTPBadRequest(text=message)
 
-    watched_branch = WatchedBranch(
-        0, FQBranch.from_short_str('populationgenomics/hail:main'), True
-    )
+    watched_branch = WatchedBranch(0, FQBranch.from_short_str('populationgenomics/hail:main'), True)
     watched_branch.sha = params['sha']
     await watched_branch._start_deploy(app['batch_client'], steps)
 
@@ -183,15 +174,11 @@ async def prod_deploy(request, userdata):
     else:
         message = traceback.format_exc()
         log.info('prod deploy failed: ' + message, exc_info=True)
-        raise web.HTTPBadRequest(
-            text=f'starting prod deploy failed due to\n{message}'
-        ) from batch.exception
+        raise web.HTTPBadRequest(text=f'starting prod deploy failed due to\n{message}') from batch.exception
 
 
 async def on_startup(app):
-    app['gh_client_session'] = aiohttp.ClientSession(
-        timeout=aiohttp.ClientTimeout(total=5)
-    )
+    app['gh_client_session'] = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5))
     app['github_client'] = gh_aiohttp.GitHubAPI(app['gh_client_session'], 'ci')
     app['batch_client'] = BatchClient('ci')
 
@@ -211,7 +198,6 @@ def run():
 
     setup_common_static_routes(routes)
     app.add_routes(routes)
-    app.router.add_get("/metrics", server_stats)
 
     web.run_app(
         deploy_config.prefix_application(app, 'ci'),

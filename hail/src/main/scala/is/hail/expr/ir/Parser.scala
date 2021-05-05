@@ -161,7 +161,13 @@ object IRParser {
   def error(t: Token, msg: String): Nothing = ParserUtils.error(t.pos, msg)
 
   def deserialize[T](str: String)(implicit formats: Formats, mf: Manifest[T]): T = {
-    Serialization.read[T](str)
+    try {
+      Serialization.read[T](str)
+    } catch {
+      case e: org.json4s.MappingException =>
+        throw new RuntimeException(s"Couldn't deserialize ${str}", e)
+    }
+
   }
 
   def consumeToken(it: TokenIterator): Token = {
@@ -875,9 +881,9 @@ object IRParser {
         }
       case "MakeStream" =>
         val typ = opt(it, type_expr(env.typEnv)).map(_.asInstanceOf[TStream]).orNull
-        val separateRegions = boolean_literal(it)
+        val requiresMemoryManagementPerElement = boolean_literal(it)
         ir_value_children(env)(it).map { args =>
-          MakeStream(args, typ, separateRegions)
+          MakeStream(args, typ, requiresMemoryManagementPerElement)
         }
       case "ArrayRef" =>
         for {
@@ -888,12 +894,12 @@ object IRParser {
       case "ArrayLen" => ir_value_expr(env)(it).map(ArrayLen)
       case "StreamLen" => ir_value_expr(env)(it).map(StreamLen)
       case "StreamRange" =>
-        val separateRegions = boolean_literal(it)
+        val requiresMemoryManagementPerElement = boolean_literal(it)
         for {
           start <- ir_value_expr(env)(it)
           stop <- ir_value_expr(env)(it)
           step <- ir_value_expr(env)(it)
-        } yield StreamRange(start, stop, step, separateRegions)
+        } yield StreamRange(start, stop, step, requiresMemoryManagementPerElement)
       case "StreamGrouped" =>
         for {
           s <- ir_value_expr(env)(it)
@@ -995,9 +1001,9 @@ object IRParser {
       case "ToArray" => ir_value_expr(env)(it).map(ToArray)
       case "CastToArray" => ir_value_expr(env)(it).map(CastToArray)
       case "ToStream" =>
-        val separateRegions = boolean_literal(it)
+        val requiresMemoryManagementPerElement = boolean_literal(it)
         ir_value_expr(env)(it).map { a =>
-          ToStream(a, separateRegions)
+          ToStream(a, requiresMemoryManagementPerElement)
         }
       case "LowerBoundOnOrderedCollection" =>
         val onKey = boolean_literal(it)
@@ -1022,12 +1028,6 @@ object IRParser {
           a <- ir_value_expr(env)(it)
           num <- ir_value_expr(env)(it)
         } yield StreamDrop(a, num)
-      case "StreamMerge" =>
-        val key = identifiers(it)
-        for {
-          left <- ir_value_expr(env)(it)
-          right <- ir_value_expr(env)(it)
-        } yield StreamMerge(left, right, key)
       case "StreamZip" =>
         val behavior = identifier(it) match {
           case "AssertSameLength" => ArrayZipBehavior.AssertSameLength

@@ -148,7 +148,7 @@ object TestUtils {
       None
   }
 
-  def loweredExecute(x: IR, env: Env[(Any, Type)],
+  def loweredExecute(ctx: ExecuteContext, x: IR, env: Env[(Any, Type)],
     args: IndexedSeq[(Any, Type)],
     agg: Option[(IndexedSeq[Row], TStruct)],
     bytecodePrinter: Option[PrintWriter] = None
@@ -158,20 +158,22 @@ object TestUtils {
 
     ExecutionTimer.logTime("TestUtils.loweredExecute") { timer =>
       HailContext.sparkBackend("TestUtils.loweredExecute")
-        .jvmLowerAndExecute(timer, x, optimize = false, lowerTable = true, lowerBM = true, print = bytecodePrinter)
+        .jvmLowerAndExecute(ctx, timer, x, optimize = false, lowerTable = true, lowerBM = true, print = bytecodePrinter)
     }
   }
 
-  def eval(x: IR): Any = eval(x, Env.empty, FastIndexedSeq(), None)
+  def eval(x: IR): Any = ExecuteContext.scoped(){ ctx =>
+    eval(x, Env.empty, FastIndexedSeq(), None, None, true, ctx)
+  }
 
   def eval(x: IR,
     env: Env[(Any, Type)],
     args: IndexedSeq[(Any, Type)],
     agg: Option[(IndexedSeq[Row], TStruct)],
     bytecodePrinter: Option[PrintWriter] = None,
-    optimize: Boolean = true
+    optimize: Boolean = true,
+    ctx: ExecuteContext
   ): Any = {
-    ExecuteContext.scoped() { ctx =>
       val inputTypesB = new BoxedArrayBuilder[Type]()
       val inputsB = new BoxedArrayBuilder[Any]()
 
@@ -246,7 +248,7 @@ object TestUtils {
             rvb.endArray()
             val aggOff = rvb.end()
 
-            val resultOff = f(0, region)(region, argsOff, aggOff)
+            val resultOff = f(ctx.fs, 0, region)(region, argsOff, aggOff)
             SafeRow(resultType2.asInstanceOf[PBaseStruct], resultOff).get(0)
           }
 
@@ -271,11 +273,10 @@ object TestUtils {
             rvb.endTuple()
             val argsOff = rvb.end()
 
-            val resultOff = f(0, region)(region, argsOff)
+            val resultOff = f(ctx.fs, 0, region)(region, argsOff)
             SafeRow(resultType2.asInstanceOf[PBaseStruct], resultOff).get(0)
           }
       }
-    }
   }
 
   def assertEvalSame(x: IR) {
@@ -292,7 +293,7 @@ object TestUtils {
     val (i, i2, c) = ExecuteContext.scoped() { ctx =>
       val i = Interpret[Any](ctx, x, env, args)
       val i2 = Interpret[Any](ctx, x, env, args, optimize = false)
-      val c = eval(x, env, args, None)
+      val c = eval(x, env, args, None, None, true, ctx)
       (i, i2, c)
     }
 
@@ -362,7 +363,7 @@ object TestUtils {
                     val pw = new PrintWriter(new File(path))
                     pw.print(s"/* JVM bytecode dump for IR:\n${Pretty(x)}\n */\n\n")
                     pw
-                  })
+                  }, true, ctx)
             case ExecStrategy.JvmCompileUnoptimized =>
               assert(Forall(x, node => Compilable(node)))
               eval(x, env, args, agg, bytecodePrinter =
@@ -372,9 +373,9 @@ object TestUtils {
                     pw.print(s"/* JVM bytecode dump for IR:\n${Pretty(x)}\n */\n\n")
                     pw
                   },
-                optimize = false)
+                optimize = false, ctx)
             case ExecStrategy.LoweredJVMCompile =>
-              loweredExecute(x, env, args, agg)
+              loweredExecute(ctx, x, env, args, agg)
           }
           if (t != TVoid) {
             assert(t.typeCheck(res), s"\n  t=$t\n  result=$res\n  strategy=$strat")
@@ -397,7 +398,7 @@ object TestUtils {
     ExecuteContext.scoped() { ctx =>
       interceptException[E](regex)(Interpret[Any](ctx, x, env, args))
       interceptException[E](regex)(Interpret[Any](ctx, x, env, args, optimize = false))
-      interceptException[E](regex)(eval(x, env, args, None))
+      interceptException[E](regex)(eval(x, env, args, None, None, true, ctx))
     }
   }
 
@@ -414,7 +415,9 @@ object TestUtils {
   }
 
   def assertCompiledThrows[E <: Throwable : Manifest](x: IR, env: Env[(Any, Type)], args: IndexedSeq[(Any, Type)], regex: String) {
-    interceptException[E](regex)(eval(x, env, args, None))
+    ExecuteContext.scoped() { ctx =>
+      interceptException[E](regex)(eval(x, env, args, None, None, true, ctx))
+    }
   }
 
   def assertCompiledThrows[E <: Throwable : Manifest](x: IR, regex: String) {

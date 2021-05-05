@@ -1,6 +1,7 @@
 package is.hail.linalg
 
 import java.lang.reflect.Method
+import java.util.function._
 
 import com.sun.jna.{FunctionMapper, Library, Native, NativeLibrary}
 import com.sun.jna.ptr.IntByReference
@@ -17,26 +18,28 @@ class UnderscoreFunctionMapper extends FunctionMapper {
 // ALL LAPACK C function args must be passed by address, not value
 // see: https://software.intel.com/content/www/us/en/develop/documentation/mkl-linux-developer-guide/top/language-specific-usage-options/mixed-language-programming-with-the-intel-math-kernel-library/calling-lapack-blas-and-cblas-routines-from-c-c-language-environments.html
 object LAPACK {
-  lazy val libraryInstance = {
-    val standard = Native.loadLibrary("lapack", classOf[LAPACKLibrary]).asInstanceOf[LAPACKLibrary]
+  private[this] val libraryInstance = ThreadLocal.withInitial(new Supplier[LAPACKLibrary]() {
+    def get() = {
+      val standard = Native.loadLibrary("lapack", classOf[LAPACKLibrary]).asInstanceOf[LAPACKLibrary]
 
-    versionTest(standard) match {
-      case Success(version) =>
-        log.info(s"Imported LAPACK version ${version} with standard names")
-        standard
-      case Failure(exception) =>
-        val underscoreAfterMap = new java.util.HashMap[String, FunctionMapper]()
-        underscoreAfterMap.put(Library.OPTION_FUNCTION_MAPPER, new UnderscoreFunctionMapper)
-        val underscoreAfter = Native.loadLibrary("lapack", classOf[LAPACKLibrary], underscoreAfterMap).asInstanceOf[LAPACKLibrary]
-        versionTest(underscoreAfter) match {
-          case Success(version) =>
-            log.info(s"Imported LAPACK version ${version} with underscore names")
-            underscoreAfter
-          case Failure(exception) =>
-            throw exception
-        }
+      versionTest(standard) match {
+        case Success(version) =>
+          log.info(s"Imported LAPACK version ${version} with standard names")
+          standard
+        case Failure(exception) =>
+          val underscoreAfterMap = new java.util.HashMap[String, FunctionMapper]()
+          underscoreAfterMap.put(Library.OPTION_FUNCTION_MAPPER, new UnderscoreFunctionMapper)
+          val underscoreAfter = Native.loadLibrary("lapack", classOf[LAPACKLibrary], underscoreAfterMap).asInstanceOf[LAPACKLibrary]
+          versionTest(underscoreAfter) match {
+            case Success(version) =>
+              log.info(s"Imported LAPACK version ${version} with underscore names")
+              underscoreAfter
+            case Failure(exception) =>
+              throw exception
+          }
+      }
     }
-  }
+  })
 
   def dgeqrf(M: Int, N: Int, A: Long, LDA: Int, TAU: Long, WORK: Long, LWORK: Int): Int = {
     val mInt = new IntByReference(M)
@@ -44,7 +47,7 @@ object LAPACK {
     val LDAInt = new IntByReference(LDA)
     val LWORKInt = new IntByReference(LWORK)
     val infoInt = new IntByReference(1)
-    libraryInstance.dgeqrf(mInt, nInt, A, LDAInt, TAU, WORK, LWORKInt, infoInt)
+    libraryInstance.get.dgeqrf(mInt, nInt, A, LDAInt, TAU, WORK, LWORKInt, infoInt)
     infoInt.getValue()
   }
 
@@ -55,7 +58,7 @@ object LAPACK {
     val LDAInt = new IntByReference(LDA)
     val LWORKInt = new IntByReference(LWORK)
     val infoInt = new IntByReference(1)
-    libraryInstance.dorgqr(mInt, nInt, kInt, A, LDAInt, TAU, WORK, LWORKInt, infoInt)
+    libraryInstance.get.dorgqr(mInt, nInt, kInt, A, LDAInt, TAU, WORK, LWORKInt, infoInt)
     infoInt.getValue()
   }
 
@@ -65,7 +68,7 @@ object LAPACK {
     val LDAref = new IntByReference(LDA)
     val INFOref = new IntByReference(1)
 
-    libraryInstance.dgetrf(Mref, Nref, A, LDAref, IPIV, INFOref)
+    libraryInstance.get.dgetrf(Mref, Nref, A, LDAref, IPIV, INFOref)
     INFOref.getValue()
   }
 
@@ -75,7 +78,7 @@ object LAPACK {
     val LWORKref = new IntByReference(LWORK)
     val INFOref = new IntByReference(1)
 
-    libraryInstance.dgetri(Nref, A, LDAref, IPIV, WORK, LWORKref, INFOref)
+    libraryInstance.get.dgetri(Nref, A, LDAref, IPIV, WORK, LWORKref, INFOref)
     INFOref.getValue()
   }
 
@@ -89,7 +92,19 @@ object LAPACK {
     val LWORKRef = new IntByReference(LWORK)
     val INFOref = new IntByReference(1)
 
-    libraryInstance.dgesdd(JOBZ, Mref, Nref, A, LDAref, S, U, LDUref, VT, LDVTref, WORK, LWORKRef, IWORK, INFOref)
+    libraryInstance.get.dgesdd(JOBZ, Mref, Nref, A, LDAref, S, U, LDUref, VT, LDVTref, WORK, LWORKRef, IWORK, INFOref)
+
+    INFOref.getValue()
+  }
+
+  def dgesv(N: Int, NHRS: Int, A: Long, LDA: Int, IPIV: Long, B: Long, LDB: Int): Int = {
+    val Nref= new IntByReference(N)
+    val NHRSref = new IntByReference(NHRS)
+    val LDAref = new IntByReference(LDA)
+    val LDBref = new IntByReference(LDB)
+    val INFOref = new IntByReference(1)
+
+    libraryInstance.get.dgesv(Nref, NHRSref, A, LDAref, IPIV, B, LDBref, INFOref)
 
     INFOref.getValue()
   }
@@ -108,6 +123,7 @@ object LAPACK {
 }
 
 trait LAPACKLibrary extends Library {
+  def dgesv(N: IntByReference, NHRS: IntByReference, A: Long, LDA: IntByReference, IPIV: Long, B: Long, LDB: IntByReference, INFO: IntByReference)
   def dgeqrf(M: IntByReference, N: IntByReference, A: Long, LDA: IntByReference, TAU: Long, WORK: Long, LWORK: IntByReference, INFO: IntByReference)
   def dorgqr(M: IntByReference, N: IntByReference, K: IntByReference, A: Long, LDA: IntByReference, TAU: Long, WORK: Long, LWORK: IntByReference, INFO: IntByReference)
   def dgetrf(M: IntByReference, N: IntByReference, A: Long, LDA: IntByReference, IPIV: Long, INFO: IntByReference)

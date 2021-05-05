@@ -94,8 +94,7 @@ class Tests(unittest.TestCase):
         _, aucs = hl.experimental.plot_roc_curve(ht, ['score1', 'score2', 'score3'])
 
     @pytest.mark.unchecked_allocator
-    @fails_service_backend()
-    @fails_local_backend()
+    @fails_service_backend(reason='''fails this assertion in ShuffleWrite assert(keyPType == shuffleType.keyDecodedPType)''')
     def test_ld_score_regression(self):
 
         ht_scores = hl.import_table(
@@ -293,7 +292,6 @@ class Tests(unittest.TestCase):
         ht = hl.experimental.pc_project(mt_to_project.GT, loadings_ht.loadings, loadings_ht.af)
         assert ht._force_count() == 100
 
-    @fails_service_backend()
     def test_mt_full_outer_join(self):
         mt1 = hl.utils.range_matrix_table(10, 10)
         mt1 = mt1.annotate_cols(c1=hl.rand_unif(0, 1))
@@ -315,7 +313,6 @@ class Tests(unittest.TestCase):
 
         assert(mtj.count() == (15, 15))
 
-    @fails_service_backend()
     def test_mt_full_outer_join_self(self):
         mt = hl.import_vcf(resource('sample.vcf'))
         jmt = hl.experimental.full_outer_join_mt(mt, mt)
@@ -439,3 +436,11 @@ class Tests(unittest.TestCase):
                 hl.if_else(my_nd[0, 0] == 1000, my_nd, f(my_nd + 1)),
                 hl.tndarray(hl.tint32, 2), hl.nd.zeros((20, 10), hl.tfloat64))
 
+    def test_loop_with_struct_of_strings(self):
+        def loop_func(recur_f, my_struct):
+            return hl.if_else(hl.len(my_struct.s1) > hl.len(my_struct.s2),
+                              my_struct,
+                              recur_f(hl.struct(s1=my_struct.s1 + my_struct.s2[-1], s2=my_struct.s2[:-1])))
+
+        initial_struct = hl.struct(s1="a", s2="gfedcb")
+        assert hl.eval(hl.experimental.loop(loop_func, hl.tstruct(s1=hl.tstr, s2=hl.tstr), initial_struct)) == hl.Struct(s1="abcd", s2="gfe")

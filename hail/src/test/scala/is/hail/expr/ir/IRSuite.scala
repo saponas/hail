@@ -2,7 +2,7 @@ package is.hail.expr.ir
 
 import is.hail.ExecStrategy.ExecStrategy
 import is.hail.TestUtils._
-import is.hail.annotations.{BroadcastRow, Region}
+import is.hail.annotations.{BroadcastRow, Region, SafeNDArray}
 import is.hail.asm4s.{Code, Value}
 import is.hail.expr.ir.ArrayZipBehavior.ArrayZipBehavior
 import is.hail.expr.ir.IRBuilder._
@@ -1791,6 +1791,17 @@ class IRSuite extends HailSuite {
 
     val filteredRange = StreamLen(StreamFilter(rangeIR(12), "x", irToPrimitiveIR(Ref("x", TInt32)) < 5))
     assertEvalsTo(filteredRange, 5)
+
+    val lenOfLet = StreamLen(bindIR(I32(5))(ref =>
+      StreamGrouped(mapIR(rangeIR(20))(range_element =>
+        InsertFields(MakeStruct(IndexedSeq(("num",  range_element + ref))), IndexedSeq(("y", 12)))), 3)))
+    assertEvalsTo(lenOfLet, 7)
+  }
+
+  @Test def testStreamLenUnconsumedInnerStream(): Unit = {
+    assertEvalsTo(StreamLen(
+      mapIR(StreamGrouped(filterIR(rangeIR(10))(x => x.cne(I32(0))), 3))( group => ToArray(group))
+    ), 3)
   }
 
   @Test def testStreamTake() {
@@ -1802,7 +1813,7 @@ class IRSuite extends HailSuite {
     assertEvalsTo(ToArray(StreamTake(a, I32(0))), FastIndexedSeq())
     assertEvalsTo(ToArray(StreamTake(a, I32(2))), FastIndexedSeq(3, null))
     assertEvalsTo(ToArray(StreamTake(a, I32(5))), FastIndexedSeq(3, null, 7))
-    assertFatal(ToArray(StreamTake(a, I32(-1))), "StreamTake: negative length")
+    assertFatal(ToArray(StreamTake(a, I32(-1))), "stream take: negative num")
     assertEvalsTo(StreamLen(StreamTake(a, 2)), 2)
   }
 
@@ -1815,7 +1826,7 @@ class IRSuite extends HailSuite {
     assertEvalsTo(ToArray(StreamDrop(a, I32(0))), FastIndexedSeq(3, null, 7))
     assertEvalsTo(ToArray(StreamDrop(a, I32(2))), FastIndexedSeq(7))
     assertEvalsTo(ToArray(StreamDrop(a, I32(5))), FastIndexedSeq())
-    assertFatal(ToArray(StreamDrop(a, I32(-1))), "StreamDrop: negative num")
+    assertFatal(ToArray(StreamDrop(a, I32(-1))), "stream drop: negative num")
 
     assertEvalsTo(StreamLen(StreamDrop(a, 1)), 2)
   }
@@ -1835,7 +1846,7 @@ class IRSuite extends HailSuite {
     assertEvalsTo(toNestedArray(StreamGrouped(a, I32(1))), FastIndexedSeq(FastIndexedSeq(3), FastIndexedSeq(null), FastIndexedSeq(7)))
     assertEvalsTo(toNestedArray(StreamGrouped(a, I32(2))), FastIndexedSeq(FastIndexedSeq(3, null), FastIndexedSeq(7)))
     assertEvalsTo(toNestedArray(StreamGrouped(a, I32(5))), FastIndexedSeq(FastIndexedSeq(3, null, 7)))
-    assertFatal(toNestedArray(StreamGrouped(a, I32(0))), "StreamGrouped: nonpositive size")
+    assertFatal(toNestedArray(StreamGrouped(a, I32(0))), "stream grouped: non-positive size")
 
     val r = rangeIR(10)
 
@@ -2601,11 +2612,11 @@ class IRSuite extends HailSuite {
   }
 
   @Test def testStreamMerge() {
-    implicit val execStrats = ExecStrategy.javaOnly
+    implicit val execStrats = ExecStrategy.compileOnly
 
     def mergeRows(left: IndexedSeq[Integer], right: IndexedSeq[Integer], key: Int): IR = {
       val typ = TStream(TStruct("k" -> TInt32, "sign" -> TInt32, "idx" -> TInt32))
-      ToArray(StreamMerge(
+      ToArray(StreamMultiMerge(FastIndexedSeq(
         if (left == null)
           NA(typ)
         else
@@ -2623,7 +2634,7 @@ class IRSuite extends HailSuite {
               "k" -> (if (n == null) NA(TInt32) else I32(n)),
               "sign" -> I32(-1),
               "idx" -> I32(idx)))
-          }, typ),
+          }, typ)),
         FastIndexedSeq("k", "sign").take(key)))
     }
 
@@ -2641,7 +2652,8 @@ class IRSuite extends HailSuite {
       Row(null, 1, 4),
       Row(null, 1, 5),
       Row(null, -1, 6),
-      Row(null, -1, 7)))
+      Row(null, -1, 7)
+    ))
 
     // right stream ends first
     assertEvalsTo(mergeRows(Array[Integer](1, 1, 2, 2), Array[Integer](0, 0, 1, 1), 1), FastIndexedSeq(
@@ -3102,10 +3114,6 @@ class IRSuite extends HailSuite {
       StreamTake(st, I32(10)),
       StreamDrop(st, I32(10)),
       StreamMap(st, "v", v),
-      StreamMerge(
-        StreamMap(StreamRange(0, 2, 1), "x", MakeStruct(FastSeq("x" -> Ref("x", TInt32)))),
-        StreamMap(StreamRange(0, 3, 1), "x", MakeStruct(FastSeq("x" -> Ref("x", TInt32)))),
-        FastSeq("x")),
       StreamZip(FastIndexedSeq(st, st), FastIndexedSeq("foo", "bar"), True(), ArrayZipBehavior.TakeMinLength),
       StreamFilter(st, "v", b),
       StreamFlatMap(sta, "v", ToStream(a)),
@@ -3168,6 +3176,7 @@ class IRSuite extends HailSuite {
       MatrixWrite(vcf, MatrixVCFWriter("/path/to/sample.vcf")),
       MatrixWrite(vcf, MatrixPLINKWriter("/path/to/base")),
       MatrixWrite(bgen, MatrixGENWriter("/path/to/base")),
+      MatrixWrite(mt, MatrixBlockMatrixWriter("path/to/data/bm", true, "a", 4096)),
       MatrixMultiWrite(Array(mt, mt), MatrixNativeMultiWriter("/path/to/prefix")),
       TableMultiWrite(Array(table, table), WrappedMatrixNativeMultiWriter(MatrixNativeMultiWriter("/path/to/prefix"), FastIndexedSeq("foo"))),
       MatrixAggregate(mt, MakeStruct(Seq("foo" -> count))),
@@ -3549,7 +3558,7 @@ class IRSuite extends HailSuite {
       assert(IRSuite.globalCounter == expectedEvaluations)
 
       IRSuite.globalCounter = 0
-      eval(x, env, args, None)
+      eval(x, env, args, None, None, true, ctx)
       assert(IRSuite.globalCounter == expectedEvaluations)
     }
 
@@ -3699,7 +3708,6 @@ class IRSuite extends HailSuite {
     Array(NPartitionsTable()),
     Array(NPartitionsMatrixTable()),
     Array(WrappedMatrixToValueFunction(NPartitionsMatrixTable(), "foo", "bar", FastIndexedSeq("a", "c"))),
-    Array(MatrixWriteBlockMatrix("a", false, "b", 1)),
     Array(MatrixExportEntriesByCol(1, "asd", false, true, false)),
     Array(GetElement(FastSeq(1, 2)))
   )
@@ -3798,6 +3806,36 @@ class IRSuite extends HailSuite {
           TInt32)))
 
     assertEvalsTo(triangleSum, FastIndexedSeq(5 -> TInt32), 15 + 10 + 5)
+  }
+
+  @Test def testTailLoopNDMemory(): Unit = {
+    implicit val execStrats = ExecStrategy.compileOnly
+
+    val ndType = TNDArray(TInt32, Nat(2))
+
+    val ndSum: IR = TailLoop("f",
+      FastIndexedSeq("x" -> In(0, TInt32), "accum" -> In(1, ndType)),
+      If(Ref("x", TInt32) <= I32(0),
+        Ref("accum", ndType),
+        Recur("f",
+          FastIndexedSeq(
+            Ref("x", TInt32) - I32(1),
+            NDArrayMap(Ref("accum", ndType), "ndElement", Ref("ndElement", ndType.elementType) + Ref("x", TInt32))),
+          ndType)))
+
+    val startingArg = SafeNDArray(IndexedSeq[Long](4L, 4L), (0 until 16).toFastIndexedSeq)
+
+    var memUsed = 0L
+
+    ExecuteContext.scoped() { ctx =>
+      eval(ndSum, Env.empty, FastIndexedSeq(2 -> TInt32, startingArg -> ndType), None, None, true, ctx)
+      memUsed = ctx.r.pool.getHighestTotalUsage
+    }
+
+    ExecuteContext.scoped() { ctx =>
+      eval(ndSum, Env.empty, FastIndexedSeq(100 -> TInt32, startingArg -> ndType), None, None, true, ctx)
+      assert(memUsed == ctx.r.pool.getHighestTotalUsage)
+    }
   }
 
   @Test def testHasIRSharing(): Unit = {

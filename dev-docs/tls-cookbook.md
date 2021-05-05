@@ -1,4 +1,5 @@
 # TLS Cookbook
+
 ## Create a Self-Signed x509 Certificate in PEM Format
 
 Produce an x509 certificate. The key is a 4096-bit RSA key. The cert is valid
@@ -46,7 +47,7 @@ openssl x509 -startdate -enddate -noout -in cert.pem
 Print a complete textual representation of the certificate.
 
 ```
-openssl -text -noout -in cert.pem
+openssl x509 -text -noout -in cert.pem
 ```
 
 ## Determine the Cause of Certificate Expiration
@@ -75,11 +76,11 @@ kubectl get secrets ssl-config-hail-root -o json \
 
 This certificate should be bit-for-bit identical to the `SERVICE-incoming.pem`
 trust file, but you should verify that. For example, download the
-`router` incoming trust:
+`batch` incoming trust:
 
 ```
-kubectl get secrets ssl-config-router -o json \
-    | jq -r '.data["router-incoming.pem"]' \
+kubectl get secrets ssl-config-batch -o json \
+    | jq -r '.data["batch-incoming.pem"]' \
     | base64 --decode \
     > hail-root-cert.pem
 ```
@@ -112,13 +113,19 @@ kubectl create secret generic \
         -n default ssl-config-hail-root \
         --from-file=hail-root-key.pem \
         --from-file=hail-root-cert.pem \
-        --dry-run -o yaml \
+        --save-config \
+        --dry-run=client \
+        -o yaml \
     | kubectl apply -f -
 ```
 
 3. Update all the service certificates:
 
 ```
+export HAIL=$HOME/hail
+
+make -C $HAIL/hail python/hailtop/hail_version
+
 PYTHONPATH=$HAIL/hail/python \
         python3 $HAIL/tls/create_certs.py \
         default \
@@ -131,8 +138,10 @@ PYTHONPATH=$HAIL/hail/python \
    not actually services, but including them in the next step is OK).
 
 ```
-SERVICES_TO_RESTART=$(python3 -c 'import yaml
-x = yaml.safe_load(open("$HAIL_HOME/tls/config.yaml"))["principals"]
+SERVICES_TO_RESTART=$(python3 -c 'import os
+import yaml
+hail_dir = os.getenv("HAIL")
+x = yaml.safe_load(open(f"{hail_dir}/tls/config.yaml"))["principals"]
 print(",".join(x["name"] for x in x))')
 ```
 

@@ -1,7 +1,7 @@
 package is.hail.types
 
 import is.hail.asm4s._
-import is.hail.expr.ir.StreamArgType
+import is.hail.expr.ir.streams.StreamArgType
 
 import scala.language.implicitConversions
 
@@ -16,6 +16,7 @@ package object physical {
     case _: PBoolean => typeInfo[Boolean]
     case PVoid => typeInfo[Unit]
     case _: PBinary => typeInfo[Long]
+    case _: PShuffle => typeInfo[Long]
     case _: PStream => classInfo[StreamArgType]
     case _: PBaseStruct => typeInfo[Long]
     case _: PNDArray => typeInfo[Long]
