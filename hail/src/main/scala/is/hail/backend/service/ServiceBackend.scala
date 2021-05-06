@@ -329,7 +329,7 @@ class ServiceBackend(
       userContext(username, timer) { ctx =>
         log.info(s"executing: ${token}")
         ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
-        registerUserFunctions(ctx, bucket)
+//        registerUserFunctions(ctx, bucket)
         execute(ctx, IRParser.parse_value_ir(ctx, code)) match {
           case Some((v, t)) =>
             JsonMethods.compact(
@@ -371,12 +371,12 @@ class ServiceBackend(
         using(ctx.fs.create(funcsPath(bucket))) { out =>
           Serialization.write(funcMap, out)
         }
-//        ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
-//        ServiceBackend.registerFunction(ctx, name, typeParamsStr, argNamesStr, argTypesStr, retType, body)
+        ctx.backendContext = new ServiceBackendContext(username, sessionID, billingProject, bucket)
+        ServiceBackend.registerFunction(ctx, name, typeParamsStr, argNamesStr, argTypesStr, retType, body)
       }
     }
-//    irrKeys = IRFunctionRegistry.irRegistry.keys
-//    log.warn(s"registerFunction: irRegistry after = $irrKeys")
+    irrKeys = IRFunctionRegistry.irRegistry.keys
+    log.warn(s"registerFunction: irRegistry after = $irrKeys")
   }
 
   def flags(): String = {
