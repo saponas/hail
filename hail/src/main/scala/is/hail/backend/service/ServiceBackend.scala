@@ -33,6 +33,7 @@ import org.json4s.jackson.{JsonMethods, Serialization}
 import org.json4s.{DefaultFormats, Formats}
 import org.newsclub.net.unix.{AFUNIXServerSocket, AFUNIXSocketAddress}
 
+import scala.collection.mutable
 import scala.annotation.switch
 import scala.reflect.ClassTag
 
