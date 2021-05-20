@@ -71,12 +71,15 @@ main() {
         echo "Container ${TERAFORM_CONTAINER} exists."
     fi
 
-    # Create AKS cluster.
-    #terraform init -backend-config="storage_account_name=<YourAzureStorageAccountName>" -backend-config="container_name=tfstate" -backend-config="access_key=<YourStorageAccountAccessKey>" -backend-config="key=codelab.microsoft.tfstate"
+    # Get an access key to the storage account.
+    # Use jq to grabe the "value" field of the first key.
+    local sa_access_key=$(az storage account keys list --resource-group "${RESOURCE_GROUP_NAME}" --account-name "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" | jq .[0].value)
 
-    # Example variables to define.
-    #export TF_VAR_client_id=<service-principal-appid>
-    #export TF_VAR_client_secret=<service-principal-password>
+    # Create AKS cluster.
+    #terraform init -backend-config="storage_account_name=${STORAGE_ACCOUNT}" -backend-config="container_name=${TERAFORM_CONTAINER}" -backend-config="access_key=${sa_access_key}" -backend-config="key=codelab.microsoft.tfstate"
+    
+    #terraform plan
+    #terraform import "azurerm_resource_group.${RESOURCE_GROUP_NAME}" "/subscriptions/${AZURE_SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP_NAME}"
 }
 
 # Run main.
