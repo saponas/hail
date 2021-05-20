@@ -41,23 +41,24 @@ main() {
     # Create resource group if it doesn't exist.
     # When a resource group doesn't exist, the `az group exists` command returns anauthorization error.
     echo "Checking if resource group ${RESOURCE_GROUP_NAME} exists."
-    rg_exists=$(2>/dev/null az group exists --n "${RESOURCE_GROUP_NAME}" --subscription "${AZURE_SUBSCRIPTION}")
+    rg_exists=$(2>/dev/null az group exists -n "${RESOURCE_GROUP_NAME}" --subscription "${AZURE_SUBSCRIPTION}")
     if [[ ${rg_exists} == "true" ]]; then
        echo "Resource group ${RESOURCE_GROUP_NAME} already exists."
     else
       echo "Resource group ${RESOURCE_GROUP_NAME} does not exist."
       echo "Creating resource group ${RESOURCE_GROUP_NAME}"
-      az group create --name "${RESOURCE_GROUP_NAME}" --location "${LOCATION}"
+      1>/dev/null az group create --name "${RESOURCE_GROUP_NAME}" --location "${LOCATION}"
     fi
 
-    #Create storage account if it doesn't exist.
+    # Create storage account if it doesn't exist.
+    # Uses jq to parse the json output and grab the "nameAvailable" field.
     echo "Checking if storage account ${STORAGE_ACCOUNT} exists."
-    sa_exists=$(2>/dev/null az storage account check-name –n "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" –-resource-group "${RESOURCE_GROUP_NAME}")
-    if [[ ${sa_exists} == "true" ]]; then
+    sa_exists=$(2>/dev/null az storage account check-name -n "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" | jq .nameAvailable)
+    if [[ ${sa_exists} == "false" ]]; then
         echo "Storage account ${STORAGE_ACCOUNT} exists."
     else
         echo "Storage account ${STORAGE_ACCOUNT} does not exist. Creating it."
-        az storage account create –-name "${STORAGE_ACCOUNT}" –-resource-group "${RESOURCE_GROUP_NAME}" –-location "${LOCATION}" --subscription "${AZURE_SUBSCRIPTION}" --auth-mode login
+        1>/dev/null az storage account create --name "${STORAGE_ACCOUNT}" --resource-group "${RESOURCE_GROUP_NAME}" --location "${LOCATION}" --subscription "${AZURE_SUBSCRIPTION}"
     fi
 
     # Create container to store teraform information if it doesn't exist.
