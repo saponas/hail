@@ -16,7 +16,7 @@ RUN unzip terraform_0.15.4_linux_amd64.zip
 RUN sudo mv terraform /usr/local/bin/
 
 # Install pip packages
-#COPY docker/requirements.txt /tmp/scripts/requirements.txt
-#WORKDIR /tmp/scripts/
-#RUN python3 -m pip install -r requirements.txt
+COPY docker/requirements.txt /tmp/scripts/requirements.txt
+WORKDIR /tmp/scripts/
+RUN python3 -m pip install -r requirements.txt
 

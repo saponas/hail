@@ -1,0 +1,78 @@
+#!/bin/bash
+# Setup a Hail batch deployment on Azure.
+#
+# Script should follow style https://google.github.io/styleguide/shellguide.html
+#
+# Environment variables that need to be set or provided with `-f .env`. See also `example.env`.
+#   - AAD_TENANT
+#   - AZHAIL_PREFIX
+#   - RESOURCE_GROUP_NAME
+#   - LOCATION
+#   - STORAGE_ACCOUNT
+#   - AZURE_SUBSCRIPTION
+#   - TERAFORM_CONTAINER
+
+main() {
+# Report terraform version
+    terraform -v
+
+    # Report Azure CLI verison
+    az --version
+
+    # Load variables we need from a .env file if specified. Ignoring comments.
+    if [ -f .env ]; then
+        echo "Found .env file. Sourcing it."
+      source ".env"
+    else
+      echo "No .env found, assuming environment variables are set already."
+    fi
+
+    # Login to Azure using the specified tenant if not already logged in.
+    2>/dev/null az account get-access-token --tenant "${AAD_TENANT}" --output none
+    if [[ $? -ne 0 ]] ; then
+      echo "Login required to authenticate with Azure."
+      echo "Attempting to login to Tenant: ${AAD_TENANT}"
+      az login --output none --tenant "${AAD_TENANT}"
+      if [[ $? -ne 0 ]]; then
+        err "Failed to authenticate with Azure"
+      fi
+    fi
+
+    # Create resource group if it doesn't exist.
+    # When a resource group doesn't exist, the `az group exists` command returns anauthorization error.
+    echo "Checking if resource group ${RESOURCE_GROUP_NAME} exists."
+    rg_exists=$(2>/dev/null az group exists --n "${RESOURCE_GROUP_NAME}" --subscription "${AZURE_SUBSCRIPTION}")
+    if [[ ${rg_exists} == "true" ]]; then
+       echo "Resource group ${RESOURCE_GROUP_NAME} already exists."
+    else
+      echo "Resource group ${RESOURCE_GROUP_NAME} does not exist."
+      echo "Creating resource group ${RESOURCE_GROUP_NAME}"
+      az group create --name "${RESOURCE_GROUP_NAME}" --location "${LOCATION}"
+    fi
+
+    #Create storage account if it doesn't exist.
+    echo "Checking if storage account ${STORAGE_ACCOUNT} exists."
+    sa_exists=$(2>/dev/null az storage account check-name –n "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" –-resource-group "${RESOURCE_GROUP_NAME}")
+    if [[ ${sa_exists} == "true" ]]; then
+        echo "Storage account ${STORAGE_ACCOUNT} exists."
+    else
+        echo "Storage account ${STORAGE_ACCOUNT} does not exist. Creating it."
+        az storage account create –-name "${STORAGE_ACCOUNT}" –-resource-group "${RESOURCE_GROUP_NAME}" –-location "${LOCATION}" --subscription "${AZURE_SUBSCRIPTION}" --auth-mode login
+    fi
+
+    # Create container to store teraform information if it doesn't exist.
+    #az storage container exists -n "${TERAFORM_CONTAINER}" --account-name "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" --auth-mode login
+    # if [az storage container exists -n "${TERAFORM_CONTAINER}" --account-name "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" --auth-mode login = false]; then
+    #     az storage container create -n "${TERAFORM_CONTAINER}" --account-name "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" --auth-mode login
+    # fi
+
+    # Create AKS cluster.
+    #terraform init -backend-config="storage_account_name=<YourAzureStorageAccountName>" -backend-config="container_name=tfstate" -backend-config="access_key=<YourStorageAccountAccessKey>" -backend-config="key=codelab.microsoft.tfstate"
+
+    # Example variables to define.
+    #export TF_VAR_client_id=<service-principal-appid>
+    #export TF_VAR_client_secret=<service-principal-password>
+}
+
+# Run main.
+main "$@"
