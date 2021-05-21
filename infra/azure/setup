@@ -38,6 +38,9 @@ main() {
       fi
     fi
 
+    # Set the subscription so future commands don't need to specifiy it.
+    az account set --subscription "${AZURE_SUBSCRIPTION}"
+
     # Create resource group if it doesn't exist.
     # When a resource group doesn't exist, the `az group exists` command returns anauthorization error.
     echo "Checking if resource group ${RESOURCE_GROUP_NAME} exists."
@@ -85,6 +88,12 @@ main() {
 
     # Have Terraform create a plan and save it to file.
     terraform plan  -out out.plan -var resource_group_name="${RESOURCE_GROUP_NAME}" -var location="${LOCATION}" -var log_analytics_workspace_location="${LOCATION}"
+
+    # Apply the Terraform configuation.
+    # This will fail until we fix
+    # - The subscription is not registered to use namespace 'Microsoft.OperationsManagement'. See https://aka.ms/rps-not-found for how to register subscriptions.","target":"Microsoft.OperationsManagement"}
+    # - either an `identity` or `service_principal` block must be specified for cluster authentication
+    #terraform apply out.plan
 }
 
 # Run main.
