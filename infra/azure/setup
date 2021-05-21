@@ -84,10 +84,10 @@ main() {
     terraform init -backend-config="storage_account_name=${STORAGE_ACCOUNT}" -backend-config="container_name=${TERAFORM_CONTAINER}" -backend-config="access_key=${sa_access_key}" -backend-config="key=codelab.microsoft.tfstate"
     
     # Import the existing resource group into the configuration because we don't have perms to have Terraform be the creator of the resource group.
-    terraform import  -var resource_group_name="${RESOURCE_GROUP_NAME}" -var location="${LOCATION}" -var log_analytics_workspace_location="${LOCATION}" "azurerm_resource_group.k8s" "/subscriptions/${AZURE_SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP_NAME}"
+    terraform import  -var resource_group_name="${RESOURCE_GROUP_NAME}" -var location="${LOCATION}" -var log_analytics_workspace_location="${log_analytics_workspace_location}" -var log_analytics_workspace_name="${log_analytics_workspace_name}" -var cluster_name="${cluster_name}" -var dns_prefix="${dns_prefix}" "azurerm_resource_group.k8s" "/subscriptions/${AZURE_SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP_NAME}"
 
     # Have Terraform create a plan and save it to file.
-    terraform plan  -out out.plan -var resource_group_name="${RESOURCE_GROUP_NAME}" -var location="${LOCATION}" -var log_analytics_workspace_location="${LOCATION}"
+    terraform plan  -out out.plan -var resource_group_name="${RESOURCE_GROUP_NAME}" -var location="${LOCATION}" -var log_analytics_workspace_location="${log_analytics_workspace_location}" -var log_analytics_workspace_name="${log_analytics_workspace_name}" -var cluster_name="${cluster_name}" -var dns_prefix="${dns_prefix}" 
 
     # Apply the Terraform configuation.
     # This will fail until we fix

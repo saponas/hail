@@ -1,3 +1,10 @@
+variable "log_analytics_workspace_location" {}
+variable "log_analytics_workspace_name" {}
+variable "location" {}
+variable "resource_group_name" {}
+variable "cluster_name" {}
+variable "dns_prefix" {}
+
 resource "azurerm_resource_group" "k8s" {
     name     = var.resource_group_name
     location = var.location
@@ -12,7 +19,7 @@ resource "azurerm_log_analytics_workspace" "test" {
     name                = "${var.log_analytics_workspace_name}-${random_id.log_analytics_workspace_name_suffix.dec}"
     location            = var.log_analytics_workspace_location
     resource_group_name = azurerm_resource_group.k8s.name
-    sku                 = var.log_analytics_workspace_sku
+    sku                 = "Standard"
 }
 
 resource "azurerm_log_analytics_solution" "test" {
@@ -44,9 +51,10 @@ resource "azurerm_kubernetes_cluster" "k8s" {
 
     default_node_pool {
         name            = "agentpool"
-        node_count      = var.agent_count
+        node_count      = 2
         vm_size         = "Standard_D2_v2"
     }
+    # node_count was originally set to var.agent_count
 
     # service_principal {
     #     client_id     = var.client_id
