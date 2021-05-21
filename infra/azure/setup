@@ -33,6 +33,11 @@ err() {
 
 
 main() {
+  # TODO handle failed/partial out of sync deployments, maybe a --destroy command (consistent with the terraform vernacular).
+  # If pre-existing azure resources exist that are out of sync with the tf state, then terraform will throw an error stating that 
+  # they need to be imported. At the least, we might want to validate that the resources we intend to create can be created before
+  # kicking off terraform.
+
   # Process options.
   while getopts "${GETOPTS_STR}" option; do
     case "${option}" in
@@ -141,14 +146,30 @@ main() {
 
   #### Create AKS cluster with Terraform ####
 
+  # TODO, might need a check to verify the storage account and container are up and running at this point, script has failed once when needing to create the container, with a ContainerNotFound error message.
+  
   # Initialize Terraform with a blob container to store state.
   terraform init -backend-config="storage_account_name=${STORAGE_ACCOUNT}" -backend-config="container_name=${TERAFORM_CONTAINER}" -backend-config="access_key=${sa_access_key}" -backend-config="key=codelab.microsoft.tfstate"
   
+  # TODO, consider using a .tfvars file. Can't directly replace .env because it doesn't support deriving one variable from another, which .env currently does.
+  # might be about to write out the tfvars file programmatically here and then use that instead of all the -var args in terraform init/plan.
+
   # Import the existing resource group into the configuration because we don't have perms to have Terraform be the creator of the resource group.
-  terraform import  -var resource_group_name="${RESOURCE_GROUP_NAME}" -var location="${LOCATION}" -var log_analytics_workspace_location="${LOCATION}" -var ssh_public_key="${ssh_public_key}" "azurerm_resource_group.k8s" "/subscriptions/${AZURE_SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP_NAME}"
+  # TODO, find a way to check for needing to import the resource group. Maybe we do this only if the RG was created above.
+  terraform import  -var resource_group_name="${RESOURCE_GROUP_NAME}" \
+                    -var location="${LOCATION}" \
+                    -var log_analytics_workspace_location="${LOCATION}" \
+                    -var ssh_public_key="${ssh_public_key}" \
+                    -var user_assigned_identity_id="${user_assigned_identity_id}" \
+                    "azurerm_resource_group.k8s" "/subscriptions/${AZURE_SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP_NAME}"
 
   # Have Terraform create a plan and save it to file.
-  terraform plan  -out out.plan -var resource_group_name="${RESOURCE_GROUP_NAME}" -var location="${LOCATION}" -var log_analytics_workspace_location="${LOCATION}" -var ssh_public_key="${ssh_public_key}"
+  terraform plan  -out out.plan \
+                  -var resource_group_name="${RESOURCE_GROUP_NAME}" \
+                  -var location="${LOCATION}" \
+                  -var log_analytics_workspace_location="${LOCATION}" \
+                  -var ssh_public_key="${ssh_public_key}" \
+                  -var user_assigned_identity_id="${user_assigned_identity_id}"
 
   # Apply the Terraform configuation.
   # This will fail until we fix

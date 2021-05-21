@@ -32,3 +32,5 @@ variable log_analytics_workspace_location {}
 variable log_analytics_workspace_sku {
     default = "PerGB2018"
 }
+
+variable user_assigned_identity_id {}

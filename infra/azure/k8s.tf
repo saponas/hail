@@ -48,6 +48,11 @@ resource "azurerm_kubernetes_cluster" "k8s" {
         vm_size         = "Standard_D2_v2"
     }
 
+    identity {
+        type                      = "UserAssigned"
+        user_assigned_identity_id = var.user_assigned_identity_id
+    }
+
     # service_principal {
     #     client_id     = var.client_id
     #     client_secret = var.client_secret
