@@ -13,18 +13,7 @@
 #   - LOCATION
 #   - STORAGE_ACCOUNT
 #   - TERAFORM_CONTAINER
-#   - dns_prefix
 #   - ssh_public_key
-#   - cluster_name
-
-export AAD_TENANT="to do"
-export AZURE_SUBSCRIPTION="to do"
-export AZHAIL_PREFIX="azhaildev0"
-export RESOURCE_GROUP_NAME="${AZHAIL_PREFIX}-rg"
-export LOCATION="westus2"
-export STORAGE_ACCOUNT="${AZHAIL_PREFIX}sa"
-export TERAFORM_CONTAINER="${AZHAIL_PREFIX}-tfstate"
-export ssh_public_key="file path to public key"
 
 #############
 # Constants #
