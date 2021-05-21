@@ -2,3 +2,4 @@
 variables.tf
 .ssh/
 .terraform*
+out.plan

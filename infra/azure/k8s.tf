@@ -1,6 +1,6 @@
 resource "azurerm_resource_group" "k8s" {
-    name     = var.RESOURCE_GROUP_NAME
-    location = var.LOCATION
+    name     = var.resource_group_name
+    location = var.location
 }
 
 resource "random_id" "log_analytics_workspace_name_suffix" {
@@ -48,10 +48,10 @@ resource "azurerm_kubernetes_cluster" "k8s" {
         vm_size         = "Standard_D2_v2"
     }
 
-    service_principal {
-        client_id     = var.client_id
-        client_secret = var.client_secret
-    }
+    # service_principal {
+    #     client_id     = var.client_id
+    #     client_secret = var.client_secret
+    # }
 
     addon_profile {
         oms_agent {
