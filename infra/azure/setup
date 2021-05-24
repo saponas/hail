@@ -20,7 +20,7 @@
 #############
 
 # Command line options.
-readonly GETOPTS_STR="c"
+readonly GETOPTS_STR="cv"
 
 #############
 # Functions #
@@ -31,6 +31,153 @@ err() {
   exit 1
 }
 
+#######################################
+# Login to Azure using the specified tenant if not already logged in.
+# Arguments:
+#   ID of a tenant to login to.
+# Returns:
+#   0 If already logged in or login is successful.
+#######################################
+login_azure() {
+  local aad_tenant="$1"
+
+  # Check if already logged in by trying to get an access token with the specified tenant.
+  2>/dev/null az account get-access-token --tenant "${aad_tenant}" --output none
+  if [[ $? -ne 0 ]] ; then
+    echo "Login required to authenticate with Azure."
+    echo "Attempting to login to Tenant: ${aad_tenant}"
+    az login --output none --tenant "${aad_tenant}"
+    if [[ $? -ne 0 ]]; then
+      err "Failed to authenticate with Azure"
+    fi
+  fi
+  return 0
+}
+
+#######################################
+# Removes local state on the filesystem.
+# Returns:
+#   0 If no errors trying to clean local state.
+#######################################
+clean_local_state() {
+  echo "Cleaning Terraform state."
+    
+    # Remove local Terraform state.
+    rm -rf ".terraform"
+    rm .terraform.lock.hcl
+    rm out.plan
+    return 0
+}
+
+#######################################
+# Removes local state on the filesystem.
+# Returns:
+#   0 If no errors trying to print versions of prerequisites.
+#######################################
+print_prereq_vers() {
+  # Report terraform version
+  terraform -v
+
+  # Report Azure CLI verison
+  az --version
+}
+
+#######################################
+# Create a Resource Group in Azure.
+# Arguments:
+#   Name for the Resource Group
+#   Azure location to create the Resource Group.
+# Returns:
+#   0 If Resource Group is created.
+#######################################
+create_resource_group() {
+  local resource_group_name="$1"
+  local location="$2"
+
+  echo "Checking if resource group ${RESOURCE_GROUP_NAME} exists."
+  
+  # When a resource group doesn't exist, the `az group exists` command returns anauthorization error.
+  local rg_exists
+  rg_exists=$(az group exists -n "${RESOURCE_GROUP_NAME}")
+  
+  if [[ $? -ne 0 ]]; then
+    err "Failed to check for existence of resource group ${RESOURCE_GROUP_NAME}. Probably a permissions issue."
+    return 1
+  fi
+
+  if [[ ${rg_exists} == "true" ]]; then
+    echo "Resource group ${RESOURCE_GROUP_NAME} already exists."
+    return 1
+  else
+    echo "Resource group ${RESOURCE_GROUP_NAME} does not exist."
+    echo "Creating resource group ${RESOURCE_GROUP_NAME}"
+    1>/dev/null az group create --name "${RESOURCE_GROUP_NAME}" --location "${LOCATION}"
+    if [[ $? -ne 0 ]]; then
+      err "Failed to create resource group ${RESOURCE_GROUP_NAME}"
+      return 1
+    else
+      return 0
+    fi
+  fi
+}
+
+#######################################
+# Create a Storage Account in Azure.
+# Arguments:
+#   Name for the Storage Account
+#   Name of the Resource Group
+#   Azure location to create the Resource Group.
+# Returns:
+#   0 If Storage Account is created.
+#######################################
+create_storage_account() {
+  local storage_account_name="$1"
+  local resource_group_name="$2"
+  local location="$3"
+  # Uses jq to parse the json output and grab the "reason" field. -r for raw so there aren't quotes in the string.
+  echo "Checking if storage account ${storage_account_name} exists."
+  local sa_reason
+  sa_reason=$(az storage account check-name -n "${storage_account_name}" | jq -r .reason)
+  # TODO This is probably checking the exit code of jq
+  if [[ $? -ne 0 ]]; then
+    err "Failed to check for existence of storage account ${storage_account_name}. Probably a permissions issue."
+  fi
+  if [[ ${sa_reason} == "AlreadyExists" ]]; then
+    echo "Storage account ${storage_account_name} exists."
+  else
+    echo "Storage account ${storage_account_name} does not exist. Creating it."
+    1>/dev/null az storage account create --name "${storage_account_name}" --resource-group "${resource_group_name}" --location "${location}"
+    if [[ $? -ne 0 ]]; then
+      err "Failed to create storage group ${storage_account_name}"
+    fi
+  fi
+}
+
+#######################################
+# Create a Storage Container in Azure.
+# Arguments:
+#   Name for the Storage Container
+#   Name of the Storage Account
+# Returns:
+#   0 If the Storage Container is created.
+#######################################
+create_storage_container() {
+  local container_name="$1"
+  local storage_account_name="$2"
+  # User should have "Storage Blob Data Contributor" role.
+  # Uses jq to parse the json output and grab the "exists" field.
+  container_exists=$(az storage container exists -n "${container_name}" --account-name "${storage_account_name}" --auth-mode login | jq .exists)
+  # TODO This is probably checking the exit code of jq
+  if [[ $? -ne 0 ]]; then
+    err "Failed to check for existence of container ${container_name} in storage account ${storage_account_name}. Probably a permissions issue."
+  fi
+  if [[ ${container_exists} == "false" ]]; then
+      echo "Creating container ${container_name}"
+      1>/dev/null az storage container create -n "${container_name}" --account-name "${storage_account_name}" --auth-mode login
+  else
+      echo "Container ${container_name} exists."
+  fi
+}
 
 main() {
   # TODO handle failed/partial out of sync deployments, maybe a --destroy command (consistent with the terraform vernacular).
@@ -42,32 +189,25 @@ main() {
   while getopts "${GETOPTS_STR}" option; do
     case "${option}" in
       c) should_clean="true";;
+      v) is_verbose="true";;
     esac
   done
 
   # Check if we are running the clean command.
+  # To remove all state, remove Terraform container on the cloud. E.g.,
+  # az storage container delete -n "${TERAFORM_CONTAINER}" --account-name "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" --auth-mode login
   if [[ -n ${should_clean} ]]; then
-    echo "Cleaning Terraform state."
-    
-    # Remove local Terraform state.
-    rm -rf ".terraform"
-    rm .terraform.lock.hcl
-    rm out.plan
-
-    # Remove Terraform container.
-    # Probably better to go remove the resources you want to remove manually and not need az login for cleaning.
-    #az storage container delete -n "${TERRAFORM_CONTAINER}" --account-name "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" --auth-mode login
-
+    # Clean and exit.
+    clean_local_state
     exit 0
   fi
 
-  # Report terraform version
-  terraform -v
+  # If verbose option, print prereq versions.
+  if [[ -n ${is_verbose} ]]; then
+    print_prereq_vers
+  fi
 
-  # Report Azure CLI verison
-  az --version
-
-  # Load variables we need from a .env file if specified. Ignoring comments.
+  # Load variables we need from a .env file if specified. Sourcing it as a script.
   if [ -f .env ]; then
       echo "Found .env file. Sourcing it."
     source ".env"
@@ -75,71 +215,22 @@ main() {
     echo "No .env found, assuming environment variables are set already."
   fi
 
+  # TODO(saponas) Report expected env vars that are not defined.
+
   # Login to Azure using the specified tenant if not already logged in.
-  2>/dev/null az account get-access-token --tenant "${AAD_TENANT}" --output none
-  if [[ $? -ne 0 ]] ; then
-    echo "Login required to authenticate with Azure."
-    echo "Attempting to login to Tenant: ${AAD_TENANT}"
-    az login --output none --tenant "${AAD_TENANT}"
-    if [[ $? -ne 0 ]]; then
-      err "Failed to authenticate with Azure"
-    fi
-  fi
+  login_azure "${AAD_TENANT}"
 
   # Set the subscription so future commands don't need to specifiy it.
-  # TODO, looks like we still specify subscription many places below, we can either remove this or remove those arguments.
   az account set --subscription "${AZURE_SUBSCRIPTION}"
 
   # Create resource group if it doesn't exist.
-  # When a resource group doesn't exist, the `az group exists` command returns anauthorization error.
-  echo "Checking if resource group ${RESOURCE_GROUP_NAME} exists."
-  rg_exists=$(az group exists -n "${RESOURCE_GROUP_NAME}" --subscription "${AZURE_SUBSCRIPTION}")
-  if [[ $? -ne 0 ]]; then
-    err "Failed to check for existence of resource group ${RESOURCE_GROUP_NAME} in subscription ${AZURE_SUBSCRIPTION}. Probably a permissions issue."
-  fi
-  if [[ ${rg_exists} == "true" ]]; then
-    echo "Resource group ${RESOURCE_GROUP_NAME} already exists."
-  else
-    echo "Resource group ${RESOURCE_GROUP_NAME} does not exist."
-    echo "Creating resource group ${RESOURCE_GROUP_NAME}"
-    1>/dev/null az group create --name "${RESOURCE_GROUP_NAME}" --location "${LOCATION}"
-    if [[ $? -ne 0 ]]; then
-      err "Failed to create resource group ${RESOURCE_GROUP_NAME}"
-    fi
-  fi
+  create_resource_group "${RESOURCE_GROUP_NAME}" "${LOCATION}"
 
   # Create storage account if it doesn't exist.
-  # Uses jq to parse the json output and grab the "reason" field. -r for raw so there aren't quotes in the string.
-  echo "Checking if storage account ${STORAGE_ACCOUNT} exists."
-  sa_reason=$(az storage account check-name -n "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" | jq -r .reason)
-  # TODO This is probably checking the exit code of jq
-  if [[ $? -ne 0 ]]; then
-    err "Failed to check for existence of storage account ${STORAGE_ACCOUNT} in subscription ${AZURE_SUBSCRIPTION}. Probably a permissions issue."
-  fi
-  if [[ ${sa_reason} == "AlreadyExists" ]]; then
-    echo "Storage account ${STORAGE_ACCOUNT} exists."
-  else
-    echo "Storage account ${STORAGE_ACCOUNT} does not exist. Creating it."
-    1>/dev/null az storage account create --name "${STORAGE_ACCOUNT}" --resource-group "${RESOURCE_GROUP_NAME}" --location "${LOCATION}" --subscription "${AZURE_SUBSCRIPTION}"
-    if [[ $? -ne 0 ]]; then
-      err "Failed to create storage group ${STORAGE_ACCOUNT}"
-    fi
-  fi
+  create_storage_account "${STORAGE_ACCOUNT}" "${RESOURCE_GROUP_NAME}" "${LOCATION}"
 
   # Create container to store teraform information if it doesn't exist.
-  # User should have "Storage Blob Data Contributor" role.
-  # Uses jq to parse the json output and grab the "exists" field.
-  container_exists=$(az storage container exists -n "${TERRAFORM_CONTAINER}" --account-name "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" --auth-mode login | jq .exists)
-  # TODO This is probably checking the exit code of jq
-  if [[ $? -ne 0 ]]; then
-    err "Failed to check for existence of container ${TERRAFORM_CONTAINER} in storage account ${STORAGE_ACCOUNT} in subscription ${AZURE_SUBSCRIPTION}. Probably a permissions issue."
-  fi
-  if [[ ${container_exists} == "false" ]]; then
-      echo "Creating container ${TERRAFORM_CONTAINER}"
-      1>/dev/null az storage container create -n "${TERRAFORM_CONTAINER}" --account-name "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" --auth-mode login
-  else
-      echo "Container ${TERRAFORM_CONTAINER} exists."
-  fi
+  create_storage_container "${TERAFORM_CONTAINER}" "${STORAGE_ACCOUNT}"
 
   # Get an access key to the storage account.
   # Use jq to grabe the "value" field of the first key. "-r" option gives raw output without quotes.
