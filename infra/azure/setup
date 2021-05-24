@@ -154,14 +154,18 @@ main() {
   # TODO, consider using a .tfvars file. Can't directly replace .env because it doesn't support deriving one variable from another, which .env currently does.
   # might be about to write out the tfvars file programmatically here and then use that instead of all the -var args in terraform init/plan.
 
-  # Import the existing resource group into the configuration because we don't have perms to have Terraform be the creator of the resource group.
-  # TODO, find a way to check for needing to import the resource group. Maybe we do this only if the RG was created above.
-  terraform import  -var resource_group_name="${RESOURCE_GROUP_NAME}" \
-                    -var location="${LOCATION}" \
-                    -var log_analytics_workspace_location="${LOCATION}" \
-                    -var ssh_public_key="${ssh_public_key}" \
-                    -var user_assigned_identity_id="${user_assigned_identity_id}" \
-                    "azurerm_resource_group.rg" "/subscriptions/${AZURE_SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP_NAME}"
+  # Import a newly created resource group into the configuration because we don't have perms to have Terraform be the creator of the resource group.
+  if [[ ${rg_exists} == "true" ]]; then
+    echo "No new resource group created, not updating terraform state."
+  else
+    echo "Importing resource group ${RESOURCE_GROUP_NAME} to terraform state."
+    terraform import  -var resource_group_name="${RESOURCE_GROUP_NAME}" \
+                      -var location="${LOCATION}" \
+                      -var log_analytics_workspace_location="${LOCATION}" \
+                      -var ssh_public_key="${ssh_public_key}" \
+                      -var user_assigned_identity_id="${user_assigned_identity_id}" \
+                      "azurerm_resource_group.rg" "/subscriptions/${AZURE_SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP_NAME}"
+  fi
 
   # Have Terraform create a plan and save it to file.
   terraform plan  -out out.plan \
@@ -178,6 +182,12 @@ main() {
   # TODO, kubernetes cluster name should be deployment specific
   az aks get-credentials --resource-group "${RESOURCE_GROUP_NAME}" --name "k8stest"
   
+  # Get the name for the default k8s config secret.
+  k8s_secret_name=$(kubectl -n default get secret -o json | jq '.items[0].metadata.name' | sed 's/"//g')
+  kubectl -n default get secret ${k8s_secret_name} -o json | jq '.data | map_values(@base64d)'
+  # TODO update $HAIL/config.mk with the above information.
+
+
 }
 
 # Run main.
