@@ -161,7 +161,7 @@ main() {
                     -var log_analytics_workspace_location="${LOCATION}" \
                     -var ssh_public_key="${ssh_public_key}" \
                     -var user_assigned_identity_id="${user_assigned_identity_id}" \
-                    "azurerm_resource_group.k8s" "/subscriptions/${AZURE_SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP_NAME}"
+                    "azurerm_resource_group.rg" "/subscriptions/${AZURE_SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP_NAME}"
 
   # Have Terraform create a plan and save it to file.
   terraform plan  -out out.plan \
