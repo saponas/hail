@@ -172,10 +172,12 @@ main() {
                   -var user_assigned_identity_id="${user_assigned_identity_id}"
 
   # Apply the Terraform configuation.
-  # This will fail until we fix
-  # - The subscription is not registered to use namespace 'Microsoft.OperationsManagement'. See https://aka.ms/rps-not-found for how to register subscriptions.","target":"Microsoft.OperationsManagement"}
-  # - either an `identity` or `service_principal` block must be specified for cluster authentication
-  #terraform apply out.plan
+  terraform apply out.plan
+
+  # Connect kubectl to newly created k8s cluster.
+  # TODO, kubernetes cluster name should be deployment specific
+  az aks get-credentials --resource-group "${RESOURCE_GROUP_NAME}" --name "k8stest"
+  
 }
 
 # Run main.
