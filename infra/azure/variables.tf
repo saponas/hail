@@ -1,36 +1,14 @@
-# variable "client_id" {}
-# variable "client_secret" {}
-
 variable "agent_count" {
     default = 3
 }
 
 variable "ssh_public_key" {
-#    default = ".ssh/id_rsa.pub"
 }
 
-variable "dns_prefix" {
-    default = "k8stest"
-}
+variable "deployment_name" {}
 
-variable cluster_name {
-    default = "k8stest"
-}
+variable "resource_group_name" {}
 
-variable resource_group_name {}
+variable "location" {}
 
-variable location {}
-
-variable log_analytics_workspace_name {
-    default = "testLogAnalyticsWorkspaceName"
-}
-
-# refer https://azure.microsoft.com/global-infrastructure/services/?products=monitor for log analytics available regions
-variable log_analytics_workspace_location {}
-
-# refer https://azure.microsoft.com/pricing/details/monitor/ for log analytics pricing 
-variable log_analytics_workspace_sku {
-    default = "PerGB2018"
-}
-
-variable user_assigned_identity_id {}
+variable "k8s_cluster_name" {}

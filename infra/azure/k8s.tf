@@ -3,16 +3,19 @@ resource "azurerm_resource_group" "rg" {
     location = var.location
 }
 
+### Log Analytics Resources ###
+
 resource "random_id" "log_analytics_workspace_name_suffix" {
     byte_length = 8
 }
 
 resource "azurerm_log_analytics_workspace" "laworkspace" {
     # The WorkSpace name has to be unique across the whole of azure, not just the current subscription/tenant.
-    name                = "${var.log_analytics_workspace_name}-${random_id.log_analytics_workspace_name_suffix.dec}"
-    location            = var.log_analytics_workspace_location
+    name                = "${var.deployment_name}la-${random_id.log_analytics_workspace_name_suffix.dec}"
+    # Note, log analytics workspace not available in all regions, see https://azure.microsoft.com/en-us/global-infrastructure/services/?products=monitor
+    location            = var.location
     resource_group_name = azurerm_resource_group.rg.name
-    sku                 = var.log_analytics_workspace_sku
+    sku                 = "PerGB2018"
 }
 
 resource "azurerm_log_analytics_solution" "test" {
@@ -28,17 +31,28 @@ resource "azurerm_log_analytics_solution" "test" {
     }
 }
 
+### Container Registry Resources ###
+
+resource "azurerm_container_registry" "acr" {
+    name                = "${var.deployment_name}acr"
+    resource_group_name = azurerm_resource_group.rg.name
+    location            = azurerm_resource_group.rg.location
+    sku                 = "Premium"
+}
+
+### K8s Resources ###
+
 resource "azurerm_user_assigned_identity" "uai" {
-    name                = "k8s_user_assigned_identity"
+    name                = "${var.deployment_name}_uai"
     location            = azurerm_resource_group.rg.location
     resource_group_name = azurerm_resource_group.rg.name
 }
 
 resource "azurerm_kubernetes_cluster" "k8s" {
-    name                = var.cluster_name
+    name                = var.k8s_cluster_name
     location            = azurerm_resource_group.rg.location
     resource_group_name = azurerm_resource_group.rg.name
-    dns_prefix          = var.dns_prefix
+    dns_prefix          = "${var.deployment_name}k8s"
 
     linux_profile {
         admin_username = "ubuntu"
@@ -59,11 +73,6 @@ resource "azurerm_kubernetes_cluster" "k8s" {
         user_assigned_identity_id = azurerm_user_assigned_identity.uai.id
     }
 
-    # service_principal {
-    #     client_id     = var.client_id
-    #     client_secret = var.client_secret
-    # }
-
     addon_profile {
         oms_agent {
         enabled                    = true
@@ -74,9 +83,5 @@ resource "azurerm_kubernetes_cluster" "k8s" {
     network_profile {
         load_balancer_sku = "Standard"
         network_plugin = "kubenet"
-    }
-
-    tags = {
-        Environment = "Development"
     }
 }
