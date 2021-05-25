@@ -230,7 +230,7 @@ main() {
   create_storage_account "${STORAGE_ACCOUNT}" "${RESOURCE_GROUP_NAME}" "${LOCATION}"
 
   # Create container to store teraform information if it doesn't exist.
-  create_storage_container "${TERAFORM_CONTAINER}" "${STORAGE_ACCOUNT}"
+  create_storage_container "${TERRAFORM_CONTAINER}" "${STORAGE_ACCOUNT}"
 
   # Get an access key to the storage account.
   # Use jq to grabe the "value" field of the first key. "-r" option gives raw output without quotes.
