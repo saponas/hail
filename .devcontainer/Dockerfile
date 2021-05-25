@@ -37,7 +37,7 @@ RUN sudo apt-get update && sudo apt-get install -y apt-transport-https gnupg2
 RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 RUN echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends docker.io python3-pip openjdk-8-jre-headless jq kubectl azure-cli wget unzip 
+    && apt-get -y install --no-install-recommends docker.io python3-pip openjdk-8-jre-headless jq kubectl azure-cli wget unzip build-essential
 
 RUN wget https://releases.hashicorp.com/terraform/0.15.4/terraform_0.15.4_linux_amd64.zip
 RUN unzip terraform_0.15.4_linux_amd64.zip

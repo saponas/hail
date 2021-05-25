@@ -199,24 +199,25 @@ write_config_mk() {
     mv ${cfg} ../../config.mk.bak
   fi
 
-  # TODO multiline echo?
-  echo "PROJECT := ${deployment_name}-rg" > ${cfg}
-  echo "REGION := ${location}" >> ${cfg}
-  echo "ZONE := ${location}" >> ${cfg}
-  echo "DOCKER_PREFIX := ${deployment_name}acr.azurecr.io" >> ${cfg}
-  echo "DOCKER_ROOT_IMAGE := \$(DOCKER_PREFIX)/ubuntu:18.04" >> ${cfg}
-  echo "DOMAIN := TODO" >> ${cfg}
-  echo "INTERNAL_IP := TODO" >> ${cfg}
-  echo "IP := TODO" >> ${cfg}
-  echo "KUBERNETES_SERVER_URL := TODO" >> ${cfg}
-  echo "" >> ${cfg}
-  echo "ifeq (\$(NAMESPACE),default)" >> ${cfg}
-  echo "SCOPE = deploy" >> ${cfg}
-  echo "DEPLOY = true" >> ${cfg}
-  echo "else" >> ${cfg}
-  echo "SCOPE = dev" >> ${cfg}
-  echo "DEPLOY = false" >> ${cfg}
-  echo "endif" >> ${cfg}
+  # Write out new "config.mk".
+  cat << EOF > ${cfg}
+PROJECT := ${deployment_name}-rg
+REGION := ${location}
+ZONE := ${location}
+DOCKER_PREFIX := ${deployment_name}acr.azurecr.io
+DOCKER_ROOT_IMAGE := \$(DOCKER_PREFIX)/ubuntu:18.04
+DOMAIN := TODO
+INTERNAL_IP := TODO
+IP := TODO
+KUBERNETES_SERVER_URL := TODO
+ifeq (\$(NAMESPACE),default)
+SCOPE = deploy
+DEPLOY = true
+else
+SCOPE = dev
+DEPLOY = false
+endif
+EOF
 }
 
 main() {
