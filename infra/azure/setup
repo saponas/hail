@@ -286,10 +286,22 @@ main() {
   az aks get-credentials --resource-group "${RESOURCE_GROUP_NAME}" --name "${K8S_CLUSTER_NAME}"
   
   # Get the name for the default k8s config secret.
-  k8s_secret_name=$(kubectl -n default get secret -o json | jq -r '.items[0].metadata.name')
-  kubectl -n default get secret ${k8s_secret_name} -o json | jq '.data | map_values(@base64d)'
+  # k8s_secret_name=$(kubectl -n default get secret -o json | jq -r '.items[0].metadata.name')
+  # kubectl -n default get secret ${k8s_secret_name} -o json | jq '.data | map_values(@base64d)'
   # TODO update $HAIL/config.mk with the above information.
 
+  # Write config.mk with relevant deployment info.
+  # TODO...
+
+  # Log in to the ACR.
+  az acr login -n "${DEPLOYMENT_NAME}acr"
+
+  # Copy third-party docker images, this will take a while as configured, since the images will be pulled from docker.io locally
+  # then pushed to the new ACR.
+  cwd=$(pwd)
+  cd ../../../docker/third-party/
+  make copy
+  cd $cwd
 
 }
 
