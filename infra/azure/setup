@@ -188,6 +188,37 @@ create_storage_container() {
   fi
 }
 
+write_config_mk() {
+  local deployment_name="$1"
+  local location="$2"
+
+  local cfg="../../config.mk"
+
+  if [ -f ../../config.mk ]; then
+    # TODO, warn if config.mk.bak already exists
+    mv ${cfg} ../../config.mk.bak
+  fi
+
+  # TODO multiline echo?
+  echo "PROJECT := ${deployment_name}-rg" > ${cfg}
+  echo "REGION := ${location}" >> ${cfg}
+  echo "ZONE := ${location}" >> ${cfg}
+  echo "DOCKER_PREFIX := ${deployment_name}acr.azurecr.io" >> ${cfg}
+  echo "DOCKER_ROOT_IMAGE := \$(DOCKER_PREFIX)/ubuntu:18.04" >> ${cfg}
+  echo "DOMAIN := TODO" >> ${cfg}
+  echo "INTERNAL_IP := TODO" >> ${cfg}
+  echo "IP := TODO" >> ${cfg}
+  echo "KUBERNETES_SERVER_URL := TODO" >> ${cfg}
+  echo "" >> ${cfg}
+  echo "ifeq (\$(NAMESPACE),default)" >> ${cfg}
+  echo "SCOPE = deploy" >> ${cfg}
+  echo "DEPLOY = true" >> ${cfg}
+  echo "else" >> ${cfg}
+  echo "SCOPE = dev" >> ${cfg}
+  echo "DEPLOY = false" >> ${cfg}
+  echo "endif" >> ${cfg}
+}
+
 main() {
   # TODO handle failed/partial out of sync deployments, maybe a --destroy command (consistent with the terraform vernacular).
   # If pre-existing azure resources exist that are out of sync with the tf state, then terraform will throw an error stating that 
@@ -291,7 +322,7 @@ main() {
   # TODO update $HAIL/config.mk with the above information.
 
   # Write config.mk with relevant deployment info.
-  # TODO...
+  write_config_mk ${DEPLOYMENT_NAME} ${LOCATION}
 
   # Log in to the ACR.
   az acr login -n "${DEPLOYMENT_NAME}acr"
@@ -299,7 +330,7 @@ main() {
   # Copy third-party docker images, this will take a while as configured, since the images will be pulled from docker.io locally
   # then pushed to the new ACR.
   cwd=$(pwd)
-  cd ../../../docker/third-party/
+  cd ../../docker/third-party/
   make copy
   cd $cwd
 
