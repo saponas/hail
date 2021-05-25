@@ -5,6 +5,15 @@
 #
 # Script should follow style https://google.github.io/styleguide/shellguide.html
 #
+# If you are using an Azure subcription with default settings and the default user,
+# the only change you should have to make before running this script (besides defining the
+# environment variables below) is adding the "Storage Blob Data Contributor" role to your
+# user at the subcription level. Of course you could also do this at the resource group
+# level instead after creating the resource group.
+#
+# TODO Add notes about creating the resource group or other resources beforing running
+# the script if you would prefer to create them outside of this script.
+#
 # Environment variables that need to be set or provided with `-f .env`. See also `example.env`.
 #   - AAD_TENANT
 #   - AZURE_SUBSCRIPTION
