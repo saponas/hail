@@ -289,21 +289,22 @@ main() {
 
   # TODO, might need a check to verify the storage account and container are up and running at this point, script has failed once when needing to create the container, with a ContainerNotFound error message.
   
-  # Initialize Terraform with a blob container to store state if the resource group isn't already there or if the state file doesn't exist. 
-  if [ ! -f .terraform/terraform.tfstate ] || ! ( terraform state list | grep -q "azurerm_resource_group.rg" ) ; then
+  # Initialize Terraform with a blob container to store state
   terraform init -backend-config="storage_account_name=${STORAGE_ACCOUNT}" -backend-config="container_name=${TERRAFORM_CONTAINER}" -backend-config="access_key=${sa_access_key}" -backend-config="key=codelab.microsoft.tfstate"
-  fi
   
   # TODO, consider using a .tfvars file. Can't directly replace .env because it doesn't support deriving one variable from another, which .env currently does.
   # might be about to write out the tfvars file programmatically here and then use that instead of all the -var args in terraform init/plan.
 
   # Import a newly created resource group into the configuration because we don't have perms to have Terraform be the creator of the resource group.
-  terraform import  -var deployment_name="${DEPLOYMENT_NAME}" \
-                    -var resource_group_name="${RESOURCE_GROUP_NAME}" \
-                    -var location="${LOCATION}" \
-                    -var ssh_public_key="${SSH_PUBLIC_KEY}" \
-                    -var k8s_cluster_name="${K8S_CLUSTER_NAME}" \
-                    "azurerm_resource_group.rg" "/subscriptions/${AZURE_SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP_NAME}"
+  # Only do this if the resource group isn't already there or if the state file doesn't exist. 
+  if [ ! -f .terraform/terraform.tfstate ] || ! ( terraform state list | grep -q "azurerm_resource_group.rg" ) ; then
+    terraform import  -var deployment_name="${DEPLOYMENT_NAME}" \
+                      -var resource_group_name="${RESOURCE_GROUP_NAME}" \
+                      -var location="${LOCATION}" \
+                      -var ssh_public_key="${SSH_PUBLIC_KEY}" \
+                      -var k8s_cluster_name="${K8S_CLUSTER_NAME}" \
+                      "azurerm_resource_group.rg" "/subscriptions/${AZURE_SUBSCRIPTION}/resourceGroups/${RESOURCE_GROUP_NAME}"
+  fi
 
   # Have Terraform create a plan and save it to file.
   terraform plan  -out out.plan \
@@ -343,6 +344,16 @@ main() {
   make copy
   cd $cwd
 
+  # Generate TLS certs.
+  openssl req -x509 -newkey rsa:4096 -keyout server-key.pem -out server-cert.pem -days 365 -subj '/CN=localhost' -nodes -sha256
+
+  # Apply ci/bootstrap.yaml.
+  kubectl -n default apply -f ../../ci/bootstrap.yaml
+
+  # Build the CI utils image.
+  cwd=$(pwd)
+  cd ../../ci/
+  make push-ci-utils
 }
 
 # Run main.
