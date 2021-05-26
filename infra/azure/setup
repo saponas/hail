@@ -188,6 +188,14 @@ create_storage_container() {
   fi
 }
 
+#######################################
+# Write config.mk in the repo root.
+# Arguments:
+#   Name of the deployment
+#   Location of the deployment
+# Returns:
+#   0 If the config file is created.
+#######################################
 write_config_mk() {
   local deployment_name="$1"
   local location="$2"
