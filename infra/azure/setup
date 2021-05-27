@@ -1,7 +1,9 @@
 #!/bin/bash
 # Setup a Hail batch deployment on Azure.
-# Usage ./setup [-c]
+# Usage ./setup [-c] [-v] [-m]
 #   -c: Clean up local and remote Terraform state.
+#   -v: Report versions for prerequists.
+#   -m: Make a VM on Azure suitable to clone this repo and run this script.
 #
 # Script should follow style https://google.github.io/styleguide/shellguide.html
 #
@@ -29,7 +31,9 @@
 #############
 
 # Command line options.
-readonly GETOPTS_STR="cv"
+readonly GETOPTS_STR="cvm"
+readonly VM_IMAGE="UbuntuLTS"
+readonly VM_USERNAME="azureuser"
 
 #############
 # Functions #
@@ -239,6 +243,7 @@ main() {
     case "${option}" in
       c) should_clean="true";;
       v) is_verbose="true";;
+      m) is_make_vm="true";;
     esac
   done
 
@@ -274,6 +279,56 @@ main() {
 
   # Create resource group if it doesn't exist.
   create_resource_group "${RESOURCE_GROUP_NAME}" "${LOCATION}"
+
+  # Make a VM on Azure appropriate for running this script and then exit.
+  # This requires the resource group creation (or verification).
+  if [[ -n ${is_make_vm} ]]; then
+    local vm_name="${DEPLOYMENT_NAME}-vm"
+
+    echo "Checking if the VM '${vm_name}' already exists."
+    local vm_list=$(az vm list -d --query "[?name=='${vm_name}']")
+    local vm_list_length=$(echo ${vm_list} | jq length)
+
+    if [[ ${vm_list_length} -gt 0 ]]; then
+      echo "The VM '${vm_name}' already exists."
+
+      local vm_ip_address=$(echo $vm_list | jq -r .[0].publicIps)
+
+      echo "Try connecting with 'ssh ${VM_USERNAME}@${vm_ip_address}'"
+
+      # TODO Check if Azure docker extension is installed for VM.
+
+      return
+    else
+      echo "VM not found."
+    fi
+
+    echo "Making a VM on Azure that you connect to and clone this repo and run this script..."
+    
+    # Will create default size of Standard_DS1_v2
+    # Approx. USD $0.057/hour while the VM is on + storage, network, etc.
+    vm_create_result=$(az vm create \
+        --resource-group "${RESOURCE_GROUP_NAME}" \
+        --name "${vm_name}" \
+        --image "${VM_IMAGE}" \
+        --admin-username "${VM_USERNAME}" \
+        --generate-ssh-keys)
+
+    # Install Docker extension for the VM.
+    az vm extension set \
+      --vm-name "${vm_name}" \
+      --resource-group "${RESOURCE_GROUP_NAME}" \
+      --name DockerExtension \
+      --publisher Microsoft.Azure.Extensions \
+      --version 1.1 
+
+    # Get IP address of the newly created machine.
+    local vm_ip_address=$(echo ${vm_create_result} | jq -r '.publicIpAddress')
+    
+    echo "Created a VM. Try connecting with 'ssh ${VM_USERNAME}@${vm_ip_address}'"
+
+    exit 0
+  fi
 
   # Create storage account if it doesn't exist.
   create_storage_account "${STORAGE_ACCOUNT}" "${RESOURCE_GROUP_NAME}" "${LOCATION}"
