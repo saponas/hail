@@ -42,11 +42,11 @@ resource "azurerm_container_registry" "acr" {
 
 ### K8s Resources ###
 
-resource "azurerm_user_assigned_identity" "uai" {
-    name                = "${var.deployment_name}_uai"
-    location            = azurerm_resource_group.rg.location
-    resource_group_name = azurerm_resource_group.rg.name
-}
+# resource "azurerm_user_assigned_identity" "uai" {
+#     name                = "${var.deployment_name}_uai"
+#     location            = azurerm_resource_group.rg.location
+#     resource_group_name = azurerm_resource_group.rg.name
+# }
 
 resource "azurerm_kubernetes_cluster" "k8s" {
     name                = var.k8s_cluster_name
@@ -69,8 +69,7 @@ resource "azurerm_kubernetes_cluster" "k8s" {
     }
 
     identity {
-        type                      = "UserAssigned"
-        user_assigned_identity_id = azurerm_user_assigned_identity.uai.id
+        type                      = "SystemAssigned"
     }
 
     addon_profile {
@@ -84,4 +83,10 @@ resource "azurerm_kubernetes_cluster" "k8s" {
         load_balancer_sku = "Standard"
         network_plugin = "kubenet"
     }
+}
+
+resource "azurerm_role_assignment" "k8s_acr_pull" {
+    scope = azurerm_container_registry.acr.id
+    role_definition_name = "AcrPull"
+    principal_id = azurerm_kubernetes_cluster.k8s.kubelet_identity[0].object_id
 }
