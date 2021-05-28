@@ -76,6 +76,8 @@ clean_local_state() {
     rm .terraform.lock.hcl
     rm out.plan
     return 0
+
+    # TODO, remove /home/$user/.kube/kubeconfig?
 }
 
 #######################################
@@ -329,9 +331,10 @@ main() {
   az aks get-credentials --resource-group "${RESOURCE_GROUP_NAME}" --name "${K8S_CLUSTER_NAME}"
   
   # Get the name for the default k8s config secret.
+  # TODO, the azure terraform script doesn't currently store any additional metadata in default_secret, though maybe this doesn't matter since we're writing config.mk using the function below.
+  # TODO, determine if default_secret is simply metadata storage or is leveraged by k8s
   # k8s_secret_name=$(kubectl -n default get secret -o json | jq -r '.items[0].metadata.name')
   # kubectl -n default get secret ${k8s_secret_name} -o json | jq '.data | map_values(@base64d)'
-  # TODO update $HAIL/config.mk with the above information.
 
   # Write config.mk with relevant deployment info.
   write_config_mk ${DEPLOYMENT_NAME} ${LOCATION}
@@ -346,8 +349,16 @@ main() {
   make copy
   cd $cwd
 
-  # Generate TLS certs.
-  openssl req -x509 -newkey rsa:4096 -keyout server-key.pem -out server-cert.pem -days 365 -subj '/CN=localhost' -nodes -sha256
+  # Generate TLS certs and apply to the cluster
+  openssl req -x509 -newkey rsa:4096 -keyout hail-root-key.pem -out hail-root-cert.pem -days 365 -subj '/CN=localhost' -nodes -sha256
+  kubectl create secret generic \
+          -n default ssl-config-hail-root \
+          --from-file=hail-root-key.pem \
+          --from-file=hail-root-cert.pem \
+          --save-config \
+          --dry-run=client \
+          -o yaml \
+      | kubectl apply -f -
 
   # Apply ci/bootstrap.yaml.
   kubectl -n default apply -f ../../ci/bootstrap.yaml
@@ -366,8 +377,9 @@ main() {
   make deploy
   cd $cwd
 
-  # Deploy the bootstrap gateway
-  # TODO, this appears to hit google buckets, look into this.
+  # Create Let's Encrypt certs
+  # TODO, the Dockerfile here pulls kubectl from google storage, should be ok.
+  # Todo, manually changed $ROOT/letsencrypt/letsencrypt.sh to not have container running certbot send agree-tos cseed.
   cwd=$(pwd)
   cd ../../letsencrypt
   make run
