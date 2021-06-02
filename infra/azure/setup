@@ -364,8 +364,11 @@ main() {
   kubectl -n default apply -f ../../ci/bootstrap.yaml
 
   # Build the CI utils image.
-  # This can fail if permissions on the repo files are wrong, they need to be 644.
+  # TODO: This can fail if permissions on the repo files are wrong, they need to be 644, since we're not working from a VM where we're
+  # cloning the hail repo and can set umask before cloning, we will need to provide instructions as to how to modify permissions on
+  # the repo after cloning.
   # As a temporary hack can `chmod g-w -R $REPO_ROOT'
+  # TODO: this seems to fail on first execution in a clean repo (N=2), but then succeeds on second execution. Investigate.
   cwd=$(pwd)
   cd ../../ci/
   make push-ci-utils
@@ -379,7 +382,7 @@ main() {
 
   # Create Let's Encrypt certs
   # TODO, the Dockerfile here pulls kubectl from google storage, should be ok.
-  # Todo, manually changed $ROOT/letsencrypt/letsencrypt.sh to not have container running certbot send agree-tos cseed.
+  # TODO, manually changed $ROOT/letsencrypt/letsencrypt.sh to not have container running certbot send agree-tos cseed.
   cwd=$(pwd)
   cd ../../letsencrypt
   make run
