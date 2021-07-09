@@ -4,7 +4,7 @@ terraform {
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "=2.46.0"
+      version = "=2.67.0"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
@@ -38,8 +38,8 @@ provider "azurerm" {
 variable "deployment_name" {}
 variable "location" {}
 
-local "domain" {
-  "${var.deployment_name}.azurewebsites.net"
+locals {
+  domain = "${var.deployment_name}.azurewebsites.net"
 }
 ### Shared resources
 
@@ -92,10 +92,9 @@ resource "azurerm_private_dns_zone" "dns_zone" {
 resource "azurerm_dns_a_record" "internal_gateway" {
   name = "*.${azurerm_private_dns_zone.dns_zone.name}"
   managed_zone = azurerm_private_dns_zone.dns_zone.name
-  type = "A"
   ttl = 300
 
-  records = [azurerm_public_ip.internal_gateway.address]
+  records = [azurerm_public_ip.internal_gateway.ip_address]
 }
 
 resource "azurerm_user_assigned_identity" "dns_identity" {
