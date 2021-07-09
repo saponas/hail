@@ -38,6 +38,9 @@ provider "azurerm" {
 variable "deployment_name" {}
 variable "location" {}
 
+local "domain" {
+  "${var.deployment_name}.azurewebsites.net"
+}
 ### Shared resources
 
 resource "azurerm_resource_group" "rg" {
@@ -47,43 +50,84 @@ resource "azurerm_resource_group" "rg" {
 
 ### Networking-related resources
 
-resource "azurerm_virtual_network" "vnet" {
-  name = "hail_vnet"
-  location = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  address_space = ["10.0.0.0/16"]
-  dns_servers = ["10.0.0.4", "10.0.0.5"]
+resource "azurerm_resource_group" "node_rg" {
+  name = "${var.deployment_name}-node-rg"
+  location = var.location
 }
+
+#resource "azurerm_virtual_network" "vnet" {
+#  name = "default"
+#  location = azurerm_resource_group.rg.location
+#  resource_group_name = azurerm_resource_group.rg.name
+#  # address_space = ["10.0.0.0/16"]
+#  # dns_servers = ["10.0.0.4", "10.0.0.5"]
+#
+#  subnet {
+#    name = "default"
+#
+#  }
+#}
 
 resource "azurerm_public_ip" "gateway" {
   name = "gateway"
-  resource_group_name = azurerm_resource_group.rg.name
-  location = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.node_rg.name
+  location = azurerm_resource_group.node_rg.location
   allocation_method = "Static"
 }
 
 resource "azurerm_public_ip" "internal_gateway" {
   # TODO, make the equivalent of address_type=INTERNAL, probably using NSG
   name = "internal-gateway"
-  resource_group_name = azurerm_resource_group.rg.name
-  location = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.node_rg.name
+  location = azurerm_resource_group.node_rg.location
   allocation_method = "Static"
 }
+
+resource "azurerm_private_dns_zone" "dns_zone" {
+  name = local.domain
+  # TODO, should this be in node-rg?
+  resource_group_name = azurerm_resource_group.rg.name
+}
+
+resource "azurerm_dns_a_record" "internal_gateway" {
+  name = "*.${azurerm_private_dns_zone.dns_zone.name}"
+  managed_zone = azurerm_private_dns_zone.dns_zone.name
+  type = "A"
+  ttl = 300
+
+  records = [azurerm_public_ip.internal_gateway.address]
+}
+
+resource "azurerm_user_assigned_identity" "dns_identity" {
+  name = "dns-identity"
+  resource_group_name = azurerm_resource_group.rg.name
+  location = azurerm_resource_group.rg.location
+}
+
+resource "azurerm_role_assignment" "dns_contributor" {
+  scope                = azurerm_private_dns_zone.dns_zone.id
+  role_definition_name = "Private DNS Zone Contributor"
+  principal_id         = azurerm_user_assigned_identity.dns_identity.principal_id
+}
+
 
 ### Kubernetes-related resources
 
 resource "azurerm_container_registry" "acr" {
-    name                = "${var.deployment_name}acr"
-    resource_group_name = azurerm_resource_group.rg.name
-    location            = azurerm_resource_group.rg.location
-    sku                 = "Premium"
+  name                = "${var.deployment_name}acr"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  sku                 = "Premium"
 }
 
 resource "azurerm_kubernetes_cluster" "vdc" {
-    name                = "${var.deployment_name}vdc"
-    location            = azurerm_resource_group.rg.location
-    resource_group_name = azurerm_resource_group.rg.name
-    dns_prefix          = "${var.deployment_name}vdc"
+  name                = "${var.deployment_name}vdc"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  dns_prefix          = "${var.deployment_name}vdc"
+
+  node_resource_group = azurerm_resource_group.node_rg.name
+  private_dns_zone_id = azurerm_private_dns_zone.dns_zone.id
 
 #    linux_profile {
 #        admin_username = "ubuntu"
@@ -93,15 +137,15 @@ resource "azurerm_kubernetes_cluster" "vdc" {
 #        }
 #    }
 
-    default_node_pool {
-        name            = "agentpool"
-        node_count      = 2
-        vm_size         = "Standard_D2_v2"
-    }
+  default_node_pool {
+    name            = "agentpool"
+    node_count      = 2
+    vm_size         = "Standard_D2_v2"
+  }
 
-    identity {
-        type                      = "SystemAssigned"
-    }
+  identity {
+    type                      = "SystemAssigned"
+  }
 
 #    addon_profile {
 #        oms_agent {
@@ -110,10 +154,14 @@ resource "azurerm_kubernetes_cluster" "vdc" {
 #        }
 #    }
 
-    network_profile {
-        load_balancer_sku = "Standard"
-        network_plugin = "kubenet"
-    }
+  network_profile {
+    load_balancer_sku = "Standard"
+    network_plugin = "kubenet"
+  }
+
+  depends_on = [
+    azurerm_role_assignment.dns_contributor
+  ]
 }
 
 resource "azurerm_kubernetes_cluster_node_pool" "vdc_preemptible_pool" {
@@ -191,7 +239,7 @@ resource "kubernetes_secret" "global_config" {
     hail_query_gcs_path = "TODO"
     default_namespace = "default"
     docker_root_image = "${azurerm_container_registry.acr.login_server}/ubuntu:18.04"
-    domain = "TODO"
+    domain = "${local.domain}"
     gcp_project = "TODO"
     gcp_region = "TODO"
     gcp_zone = "TODO"
