@@ -1,12 +1,12 @@
-PROJECT := mwtftest-rg
+PROJECT := azhaildev2-rg
 REGION := westus2
 ZONE := westus2
-DOCKER_PREFIX := mwtftestacr.azurecr.io
+DOCKER_PREFIX := azhaildev2acr.azurecr.io
 DOCKER_ROOT_IMAGE := $(DOCKER_PREFIX)/ubuntu:18.04
-DOMAIN := mwtftest.azurewebsites.net
-INTERNAL_IP := 20.190.44.219
-IP := 52.151.53.179
-KUBERNETES_SERVER_URL := https://mwtftestvdc-d70e2049.hcp.westus2.azmk8s.io
+DOMAIN := azhaildev2.azurewebsites.net
+INTERNAL_IP := 52.148.164.36
+IP := 40.91.87.11
+KUBERNETES_SERVER_URL := https://azhaildev2vdc-ab81f4ac.hcp.westus2.azmk8s.io
 ifeq ($(NAMESPACE),default)
 SCOPE = deploy
 DEPLOY = true
