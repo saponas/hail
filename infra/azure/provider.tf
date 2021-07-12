@@ -18,6 +18,9 @@ terraform {
 
 # Configure the Azure provider
 provider "azurerm" {
-  features {}
+  features { }
+  # Provider registrations (Microsoft.DataProtection, Microsoft.AVS) require 
+  # subscription-level permissions, so they must be registered ahead of time
+  skip_provider_registration = true
 }
 

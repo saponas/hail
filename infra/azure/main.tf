@@ -52,7 +52,8 @@ resource "azurerm_private_dns_zone" "dns_zone" {
 
 resource "azurerm_dns_a_record" "internal_gateway" {
   name = "*.${azurerm_private_dns_zone.dns_zone.name}"
-  managed_zone = azurerm_private_dns_zone.dns_zone.name
+  zone_name = azurerm_private_dns_zone.dns_zone.name
+  resource_group_name = data.azurerm_resource_group.rg.name
   ttl = 300
 
   records = [azurerm_public_ip.internal_gateway.ip_address]
