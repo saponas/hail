@@ -130,6 +130,9 @@ create_storage_container() {
   if [[ ${container_exists} == "false" ]]; then
       echo "Creating container ${container_name}"
       1>/dev/null az storage container create -n "${container_name}" --account-name "${storage_account_name}" --auth-mode login
+      if [[ $? -ne 0 ]]; then
+        err "Failed to create storage container ${container_name}"
+      fi
       # Wait for storage container to create, TODO consider polling.
       sleep 5
   else
@@ -225,9 +228,12 @@ main() {
   create_storage_container "tfstate" "${STORAGE_ACCOUNT}"
   # Get an access key to the storage account for Terraform state. Use jq to grab the "value" field of the first key. "-r" option gives raw output without quotes.
   local sa_access_key=$(az storage account keys list --resource-group "${RESOURCE_GROUP_NAME}" --account-name "${STORAGE_ACCOUNT}" --subscription "${AZURE_SUBSCRIPTION}" | jq -r .[0].value)
+  if [[ $? -ne 0 ]]; then
+    err "Failed to get access key for storage account ${STORAGE_ACCOUNT}"
+  fi
   # TODO, might need a check to verify the storage account and container are up and running at this point, script has failed once when needing to create the container, with a ContainerNotFound error message.
   # Configure Terraform backend (azurerm) to use Azure blob container to store state. This configuration is persisted in local tfstate.
-  terraform init -backend-config="storage_account_name=${STORAGE_ACCOUNT}" -backend-config="container_name=tfstate" -backend-config="access_key=${sa_access_key}" -backend-config="key=hail.tfstate"
+  terraform init -reconfigure -backend-config="storage_account_name=${STORAGE_ACCOUNT}" -backend-config="container_name=tfstate" -backend-config="access_key=${sa_access_key}" -backend-config="key=hail.tfstate"
 
   # Create Terraform variables file if it doesn't exist.
   make_tfvars "${DEPLOYMENT_NAME}" "${RESOURCE_GROUP_NAME}"
