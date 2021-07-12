@@ -24,3 +24,7 @@ provider "azurerm" {
   skip_provider_registration = true
 }
 
+# Master resource group for deployment (unmanaged)
+data "azurerm_resource_group" "rg" {
+  name = var.resource_group_name
+}
