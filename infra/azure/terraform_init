@@ -204,6 +204,7 @@ main() {
     err "Missing variable AZURE_SUBSCRIPTION (specify via environment or '.env' file)"
   fi
 
+  # TODO, deployment name validity check
   echo "DEPLOYMENT_NAME = $DEPLOYMENT_NAME, LOCATION = $LOCATION"
   local RESOURCE_GROUP_NAME="${DEPLOYMENT_NAME}-rg"
   local STORAGE_ACCOUNT="${DEPLOYMENT_NAME}tfsa"

@@ -1,64 +1,25 @@
-# We strongly recommend using the required_providers block to set the
-# Azure Provider source and version being used
-terraform {
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "=2.67.0"
-    }
-    kubernetes = {
-      source  = "hashicorp/kubernetes"
-      version = "1.13.3"
-    }
-  }
-}
 
-terraform {
-    backend "azurerm" {}
-}
-
-# Configure the Microsoft Azure Provider
-# This block is only necessary if the account running terraform does not have appropriate
-# privs to register resource providers. In that case, Terraform will fail to 
-# apply the plan unless all required resource providers are registered by an account 
-# with appropriate privs.
-#
-# You can verify whether you have sufficient privs to register resource providers by 
-# running the following az cli command:
-#   `az provider register --subscription "YOURSUBSCRIPTION" -n Microsoft.Maps
-provider "azurerm" {
-#   skip_provider_registration=true
- 
-  features {
-  }
-}
-
-### Variables
-
-variable "deployment_name" {}
-variable "location" {}
 
 locals {
   domain = "${var.deployment_name}.azurewebsites.net"
 }
 ### Shared resources
 
-resource "azurerm_resource_group" "rg" {
-  name = "${var.deployment_name}-rg"
-  location = var.location
+data "azurerm_resource_group" "rg" {
+  name = var.resource_group_name
 }
 
 ### Networking-related resources
 
 resource "azurerm_resource_group" "node_rg" {
   name = "${var.deployment_name}-node-rg"
-  location = var.location
+  location = data.azurerm_resource_group.rg.location
 }
 
 #resource "azurerm_virtual_network" "vnet" {
 #  name = "default"
-#  location = azurerm_resource_group.rg.location
-#  resource_group_name = azurerm_resource_group.rg.name
+#  location = data.azurerm_resource_group.rg.location
+#  resource_group_name = data.azurerm_resource_group.rg.name
 #  # address_space = ["10.0.0.0/16"]
 #  # dns_servers = ["10.0.0.4", "10.0.0.5"]
 #
@@ -86,7 +47,7 @@ resource "azurerm_public_ip" "internal_gateway" {
 resource "azurerm_private_dns_zone" "dns_zone" {
   name = local.domain
   # TODO, should this be in node-rg?
-  resource_group_name = azurerm_resource_group.rg.name
+  resource_group_name = data.azurerm_resource_group.rg.name
 }
 
 resource "azurerm_dns_a_record" "internal_gateway" {
@@ -99,8 +60,8 @@ resource "azurerm_dns_a_record" "internal_gateway" {
 
 resource "azurerm_user_assigned_identity" "dns_identity" {
   name = "dns-identity"
-  resource_group_name = azurerm_resource_group.rg.name
-  location = azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
+  location = data.azurerm_resource_group.rg.location
 }
 
 resource "azurerm_role_assignment" "dns_contributor" {
@@ -114,15 +75,15 @@ resource "azurerm_role_assignment" "dns_contributor" {
 
 resource "azurerm_container_registry" "acr" {
   name                = "${var.deployment_name}acr"
-  resource_group_name = azurerm_resource_group.rg.name
-  location            = azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
   sku                 = "Premium"
 }
 
 resource "azurerm_kubernetes_cluster" "vdc" {
   name                = "${var.deployment_name}vdc"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
   dns_prefix          = "${var.deployment_name}vdc"
 
   node_resource_group = azurerm_resource_group.node_rg.name
