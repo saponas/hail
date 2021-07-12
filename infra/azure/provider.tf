@@ -13,12 +13,12 @@ terraform {
 
 # Use Azure blob store to manage tfstate
 terraform {
-    backend "azurerm" {}
+  backend "azurerm" {}
 }
 
 # Configure the Azure provider
 provider "azurerm" {
-  features { }
+  features {}
   # Provider registrations (Microsoft.DataProtection, Microsoft.AVS) require 
   # subscription-level permissions, so they must be registered ahead of time
   skip_provider_registration = true
