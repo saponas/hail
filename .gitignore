@@ -37,3 +37,4 @@ website/website/static/css/
 */hail.jar
 infra/.terraform.lock.hcl
 .venv/
+.vscode/
