@@ -1,10 +1,10 @@
+
 resource "azurerm_kubernetes_cluster" "vdc" {
   name                = "${var.deployment_name}vdc"
   resource_group_name = data.azurerm_resource_group.rg.name
   location            = data.azurerm_resource_group.rg.location
   dns_prefix          = "${var.deployment_name}vdc"
-
-  node_resource_group = data.azurerm_resource_group.rg.name
+  node_resource_group = "${var.deployment_name}-node-rg"
 
   #   linux_profile {
   #     admin_username = var.vm_user_name
@@ -32,10 +32,11 @@ resource "azurerm_kubernetes_cluster" "vdc" {
   }
 
   network_profile {
-    network_plugin     = "azure"
+    network_plugin = "azure"
+    service_cidr   = "10.0.0.0/16"
+    # Address within the Kubernetes service range for kube-dns
     dns_service_ip     = "10.0.0.10"
     docker_bridge_cidr = "172.17.0.1/16"
-    service_cidr       = "10.0.0.0/16"
   }
 
   depends_on = [azurerm_virtual_network.default, azurerm_application_gateway.network]
