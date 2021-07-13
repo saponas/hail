@@ -18,6 +18,11 @@ resource "azurerm_kubernetes_cluster" "vdc" {
     http_application_routing {
       enabled = false
     }
+    ingress_application_gateway {
+        enabled = true
+        gateway_name = "appgateway1"
+        subnet_cidr = "15.1.0.0/16"
+    }
   }
 
   default_node_pool {
@@ -31,13 +36,13 @@ resource "azurerm_kubernetes_cluster" "vdc" {
     type = "SystemAssigned"
   }
 
-  network_profile {
-    network_plugin = "azure"
-    service_cidr   = "10.0.0.0/16"
-    # Address within the Kubernetes service range for kube-dns
-    dns_service_ip     = "10.0.0.10"
-    docker_bridge_cidr = "172.17.0.1/16"
-  }
+#   network_profile {
+#     network_plugin = "azure"
+#     service_cidr   = "10.0.0.0/16"
+#     # Address within the Kubernetes service range for kube-dns
+#     dns_service_ip     = "10.0.0.10"
+#     docker_bridge_cidr = "172.17.0.1/16"
+#   }
 
-  depends_on = [azurerm_virtual_network.default, azurerm_application_gateway.network]
+  depends_on = [azurerm_virtual_network.default]
 }

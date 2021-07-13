@@ -12,12 +12,12 @@ resource "azurerm_subnet" "kubesubnet" {
   address_prefixes     = ["15.0.0.0/16"]
 }
 
-resource "azurerm_subnet" "appgwsubnet" {
-  name                 = "appgwsubnet"
-  virtual_network_name = azurerm_virtual_network.default.name
-  resource_group_name  = data.azurerm_resource_group.rg.name
-  address_prefixes     = ["15.1.0.0/16"]
-}
+# resource "azurerm_subnet" "appgwsubnet" {
+#   name                 = "appgwsubnet"
+#   virtual_network_name = azurerm_virtual_network.default.name
+#   resource_group_name  = data.azurerm_resource_group.rg.name
+#   address_prefixes     = ["15.1.0.0/16"]
+# }
 
 resource "azurerm_public_ip" "gateway" {
   name                = "gateway"
