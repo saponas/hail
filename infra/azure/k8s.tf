@@ -1,3 +1,9 @@
+resource "azurerm_container_registry" "acr" {
+  name                = "${var.deployment_name}acr"
+  resource_group_name = data.azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
+  sku                 = "Premium"
+}
 
 resource "azurerm_kubernetes_cluster" "vdc" {
   name                = "${var.deployment_name}vdc"
@@ -40,4 +46,81 @@ resource "azurerm_kubernetes_cluster" "vdc" {
 #   }
 
   depends_on = [azurerm_virtual_network.default]
+}
+
+data "azurerm_resource_group" "node_rg" {
+  name = azurerm_kubernetes_cluster.vdc.node_resource_group
+}
+
+resource "azurerm_kubernetes_cluster_node_pool" "vdc_preemptible_pool" {
+  # TODO, name change from GCP configuration. Look for impact throughout codebase
+  name                  = "preempt"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.vdc.id
+  vm_size               = "Standard_D2_v2"
+  enable_auto_scaling   = true
+  node_count            = 1
+  max_count             = 200
+  min_count             = 0
+
+  priority = "Spot"
+  node_labels = {
+    "preemptible" = "true"
+  }
+  node_taints = ["preemptible=true:NoSchedule"]
+
+  # TODO, this resource always requires delete/re-add on subsequent terraform apply calls. I think a change in the config here can fix that.
+  # TODO, may need metadata and oath_scopes equivalent from GCP configuration. 
+}
+
+resource "azurerm_kubernetes_cluster_node_pool" "vdc_nonpreemptible_pool" {
+  # TODO, name change from GCP configuration. Look for impact throughout codebase.
+  name                  = "nonpreempt"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.vdc.id
+  vm_size               = "Standard_D2_v2"
+  enable_auto_scaling   = true
+  node_count            = 1
+  max_count             = 200
+  min_count             = 0
+
+  node_labels = {
+    "preemptible" = "false"
+  }
+
+  # TODO, may need metadata and oath_scopes equivalent from GCP configuration
+}
+
+resource "kubernetes_secret" "global_config" {
+  metadata {
+    name = "global-config"
+  }
+
+  data = {
+    batch_gcp_regions     = "TODO"
+    batch_logs_bucket     = "TODO"
+    hail_query_gcs_path   = "TODO"
+    default_namespace     = "default"
+    docker_root_image     = "${azurerm_container_registry.acr.login_server}/ubuntu:18.04"
+    domain                = "TODO"
+    gcp_project           = "TODO"
+    gcp_region            = "TODO"
+    gcp_zone              = "TODO"
+    docker_prefix         = azurerm_container_registry.acr.login_server
+    gsuite_organization   = "TODO"
+    internal_ip           = "TODO"
+    ip                    = azurerm_public_ip.gateway.ip_address
+    kubernetes_server_url = "https://${azurerm_kubernetes_cluster.vdc.fqdn}"
+  }
+}
+
+
+resource "azurerm_role_assignment" "acr_pull" {
+  scope                = azurerm_container_registry.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_kubernetes_cluster.vdc.kubelet_identity[0].object_id
+}
+
+resource "azurerm_role_assignment" "acr_push" {
+  scope                = azurerm_container_registry.acr.id
+  role_definition_name = "AcrPush"
+  principal_id         = azurerm_kubernetes_cluster.vdc.kubelet_identity[0].object_id
 }

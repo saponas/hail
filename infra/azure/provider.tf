@@ -24,6 +24,22 @@ provider "azurerm" {
   skip_provider_registration = true
 }
 
+# Configure the Kubernetes provider
+provider "kubernetes" {
+  load_config_file = false
+
+  host = "https://${azurerm_kubernetes_cluster.vdc.fqdn}"
+  cluster_ca_certificate = base64decode(
+    azurerm_kubernetes_cluster.vdc.kube_config[0].cluster_ca_certificate
+  )
+  client_certificate = base64decode(
+    azurerm_kubernetes_cluster.vdc.kube_config[0].client_certificate
+  )
+  client_key = base64decode(
+    azurerm_kubernetes_cluster.vdc.kube_config[0].client_key
+  )
+}
+
 # Master resource group for deployment (unmanaged)
 data "azurerm_resource_group" "rg" {
   name = var.resource_group_name

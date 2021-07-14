@@ -236,6 +236,7 @@ main() {
   terraform init -reconfigure -backend-config="storage_account_name=${STORAGE_ACCOUNT}" -backend-config="container_name=tfstate" -backend-config="access_key=${sa_access_key}" -backend-config="key=hail.tfstate"
 
   # Create Terraform variables file if it doesn't exist.
+  # TODO, determine if we need to recreate based on content?
   make_tfvars "${DEPLOYMENT_NAME}" "${RESOURCE_GROUP_NAME}"
 }
 
