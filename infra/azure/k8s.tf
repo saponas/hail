@@ -18,11 +18,6 @@ resource "azurerm_kubernetes_cluster" "vdc" {
     http_application_routing {
       enabled = false
     }
-    ingress_application_gateway {
-        enabled = true
-        gateway_name = "appgateway1"
-        subnet_cidr = "15.1.0.0/16"
-    }
   }
 
   default_node_pool {
