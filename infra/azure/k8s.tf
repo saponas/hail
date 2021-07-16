@@ -37,13 +37,13 @@ resource "azurerm_kubernetes_cluster" "vdc" {
     type = "SystemAssigned"
   }
 
-#   network_profile {
-#     network_plugin = "azure"
-#     service_cidr   = "10.0.0.0/16"
-#     # Address within the Kubernetes service range for kube-dns
-#     dns_service_ip     = "10.0.0.10"
-#     docker_bridge_cidr = "172.17.0.1/16"
-#   }
+  #   network_profile {
+  #     network_plugin = "azure"
+  #     service_cidr   = "10.0.0.0/16"
+  #     # Address within the Kubernetes service range for kube-dns
+  #     dns_service_ip     = "10.0.0.10"
+  #     docker_bridge_cidr = "172.17.0.1/16"
+  #   }
 
   depends_on = [azurerm_virtual_network.default]
 }

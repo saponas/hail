@@ -318,7 +318,7 @@ main() {
 
 not_implemented() {
   # Generate TLS certs and apply to the cluster
-  openssl req -x509 -newkey rsa:4096 -keyout hail-root-key.pem -out hail-root-cert.pem -days 365 -subj '/CN=localhost' -nodes -sha256
+  openssl req -x509 -newkey rsa:4096 -keyout hail-root-key.pem -out hail-root-cert.pem -days 365 -subj '/CN=hail-root' -nodes -sha256
   kubectl create secret generic \
           -n default ssl-config-hail-root \
           --from-file=hail-root-key.pem \

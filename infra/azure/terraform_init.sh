@@ -16,14 +16,15 @@ err() {
 }
 
 #######################################
-# Login to Azure using the specified tenant if not already logged in.
+# Login to Azure using the specified tenant 
+# and set the specified subscription.
 # Arguments:
 #   ID of a tenant to login to.
-# Returns:
-#   0 If already logged in or login is successful.
+#   ID of subscription to set.
 #######################################
 login_azure() {
   local aad_tenant="$1"
+  local az_subscription="$2"
 
   # Check if already logged in by trying to get an access token with the specified tenant.
   2>/dev/null az account get-access-token --tenant "${aad_tenant}" --output none
@@ -35,7 +36,11 @@ login_azure() {
       err "Failed to authenticate with Azure"
     fi
   fi
-  return 0
+
+  local sub_name=$(az account show --subscription "${az_subscription}" | jq -r .name)
+  # Set the subscription so future commands don't need to specify it.
+  echo "Setting subscription to $sub_name (${az_subscription})."
+  az account set --subscription "${az_subscription}"
 }
 
 #######################################
@@ -145,17 +150,10 @@ create_storage_container() {
 # Arguments:
 #   Name of the deployment
 #   Name of the main resource group
-# Returns:
-#   0 If the config file is created.
 #######################################
 make_tfvars() {
   local deployment_name="$1"
   local resource_group_name="$2"
-
-  if [ -f terraform.tfvars ]; then
-    echo "Variable file terraform.tfvars already exists."
-    return 1
-  fi
 
   # Write out new default tfvars file.
   cat << EOF > terraform.tfvars
@@ -164,7 +162,6 @@ resource_group_name = "${resource_group_name}"
 EOF
 
   echo "Variable file terraform.tfvars created."
-  return 0
 }
 
 main() {
@@ -215,11 +212,7 @@ main() {
   # Login to Azure using the specified tenant if not already logged in.
   # Note, terraform recomments authenticating to az cli manually when running terraform locally,
   # see: https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/guides/managed_service_identity
-  login_azure "${AAD_TENANT}"
-  local sub_name=$(az account show --subscription "${AZURE_SUBSCRIPTION}" | jq -r .name)
-  # Set the subscription so future commands don't need to specify it.
-  echo "Setting subscription to $sub_name (${AZURE_SUBSCRIPTION})."
-  az account set --subscription "${AZURE_SUBSCRIPTION}"
+  login_azure "${AAD_TENANT}" "${AZURE_SUBSCRIPTION}"
   # Create resource group if it doesn't exist.
   create_resource_group "${RESOURCE_GROUP_NAME}" "${LOCATION}"
   # Create storage account for Terraform state if it doesn't exist.
@@ -235,8 +228,7 @@ main() {
   # Configure Terraform backend (azurerm) to use Azure blob container to store state. This configuration is persisted in local tfstate.
   terraform init -reconfigure -backend-config="storage_account_name=${STORAGE_ACCOUNT}" -backend-config="container_name=tfstate" -backend-config="access_key=${sa_access_key}" -backend-config="key=hail.tfstate"
 
-  # Create Terraform variables file if it doesn't exist.
-  # TODO, determine if we need to recreate based on content?
+  # Create/update Terraform variables file.
   make_tfvars "${DEPLOYMENT_NAME}" "${RESOURCE_GROUP_NAME}"
 }
 
