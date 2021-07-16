@@ -157,7 +157,7 @@ make_tfvars() {
 
   # Write out new default tfvars file.
   cat << EOF > terraform.tfvars
-deployment_name = "${deployment_name}"
+deployment_name     = "${deployment_name}"
 resource_group_name = "${resource_group_name}"
 EOF
 

@@ -1,10 +1,3 @@
-resource "azurerm_container_registry" "acr" {
-  name                = "${var.deployment_name}acr"
-  resource_group_name = data.azurerm_resource_group.rg.name
-  location            = data.azurerm_resource_group.rg.location
-  sku                 = "Premium"
-}
-
 resource "azurerm_kubernetes_cluster" "vdc" {
   name                = "${var.deployment_name}vdc"
   resource_group_name = data.azurerm_resource_group.rg.name
@@ -61,15 +54,15 @@ resource "azurerm_kubernetes_cluster_node_pool" "vdc_preemptible_pool" {
   max_count             = 200
   min_count             = 0
   # Must explicitly specify subnet or node pool will be recreated on every apply.
-  vnet_subnet_id        = resource.azurerm_subnet.kubesubnet.id
+  vnet_subnet_id = resource.azurerm_subnet.kubesubnet.id
   # Spot priority adds default labels, taints, and eviction policy that are 
   # specified explicitly to avoid node pool getting recreated on every apply.
-  priority = "Spot"
-  eviction_policy       = "Delete"
+  priority        = "Spot"
+  eviction_policy = "Delete"
 
   node_labels = {
     "kubernetes.azure.com/scalesetpriority" = "spot"
-    "preemptible" = "true"
+    "preemptible"                           = "true"
   }
   node_taints = [
     "preemptible=true:NoSchedule",
@@ -86,7 +79,7 @@ resource "azurerm_kubernetes_cluster_node_pool" "vdc_nonpreemptible_pool" {
   max_count             = 200
   min_count             = 0
   # Must explicitly specify subnet or node pool will be recreated on every apply.
-  vnet_subnet_id        = resource.azurerm_subnet.kubesubnet.id
+  vnet_subnet_id = resource.azurerm_subnet.kubesubnet.id
 
   node_labels = {
     "preemptible" = "false"
@@ -114,6 +107,13 @@ resource "kubernetes_secret" "global_config" {
     ip                    = azurerm_public_ip.gateway.ip_address
     kubernetes_server_url = "https://${azurerm_kubernetes_cluster.vdc.fqdn}"
   }
+}
+
+resource "azurerm_container_registry" "acr" {
+  name                = "${var.deployment_name}acr"
+  resource_group_name = data.azurerm_resource_group.rg.name
+  location            = data.azurerm_resource_group.rg.location
+  sku                 = "Premium"
 }
 
 resource "azurerm_role_assignment" "acr_pull" {
