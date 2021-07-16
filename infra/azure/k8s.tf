@@ -58,18 +58,23 @@ resource "azurerm_kubernetes_cluster_node_pool" "vdc_preemptible_pool" {
   kubernetes_cluster_id = azurerm_kubernetes_cluster.vdc.id
   vm_size               = "Standard_D2_v2"
   enable_auto_scaling   = true
-  node_count            = 1
   max_count             = 200
   min_count             = 0
-
+  # Must explicitly specify subnet or node pool will be recreated on every apply.
+  vnet_subnet_id        = resource.azurerm_subnet.kubesubnet.id
+  # Spot priority adds default labels, taints, and eviction policy that are 
+  # specified explicitly to avoid node pool getting recreated on every apply.
   priority = "Spot"
+  eviction_policy       = "Delete"
+
   node_labels = {
+    "kubernetes.azure.com/scalesetpriority" = "spot"
     "preemptible" = "true"
   }
-  node_taints = ["preemptible=true:NoSchedule"]
-
-  # TODO, this resource always requires delete/re-add on subsequent terraform apply calls. I think a change in the config here can fix that.
-  # TODO, may need metadata and oath_scopes equivalent from GCP configuration. 
+  node_taints = [
+    "preemptible=true:NoSchedule",
+    "kubernetes.azure.com/scalesetpriority=spot:NoSchedule"
+  ]
 }
 
 resource "azurerm_kubernetes_cluster_node_pool" "vdc_nonpreemptible_pool" {
@@ -78,15 +83,14 @@ resource "azurerm_kubernetes_cluster_node_pool" "vdc_nonpreemptible_pool" {
   kubernetes_cluster_id = azurerm_kubernetes_cluster.vdc.id
   vm_size               = "Standard_D2_v2"
   enable_auto_scaling   = true
-  node_count            = 1
   max_count             = 200
   min_count             = 0
+  # Must explicitly specify subnet or node pool will be recreated on every apply.
+  vnet_subnet_id        = resource.azurerm_subnet.kubesubnet.id
 
   node_labels = {
     "preemptible" = "false"
   }
-
-  # TODO, may need metadata and oath_scopes equivalent from GCP configuration
 }
 
 resource "kubernetes_secret" "global_config" {
@@ -111,7 +115,6 @@ resource "kubernetes_secret" "global_config" {
     kubernetes_server_url = "https://${azurerm_kubernetes_cluster.vdc.fqdn}"
   }
 }
-
 
 resource "azurerm_role_assignment" "acr_pull" {
   scope                = azurerm_container_registry.acr.id
