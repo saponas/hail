@@ -106,6 +106,7 @@ resource "kubernetes_secret" "global_config" {
     internal_ip           = "TODO"
     ip                    = azurerm_public_ip.gateway.ip_address
     kubernetes_server_url = "https://${azurerm_kubernetes_cluster.vdc.fqdn}"
+    admin_email           = "${var.admin_email}"
   }
 }
 

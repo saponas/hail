@@ -1,12 +1,13 @@
-PROJECT := hailtest1
+PROJECT := hailtest0
 REGION := westus2
 ZONE := westus2
-DOCKER_PREFIX := hailtest1acr.azurecr.io
-DOCKER_ROOT_IMAGE := $(DOCKER_PREFIX)/ubuntu:18.04
-DOMAIN := azhaildev2.azurewebsites.net
-INTERNAL_IP := "TODO"
-IP := 20.69.76.201
-KUBERNETES_SERVER_URL := https://azhaildev2vdc-ab81f4ac.hcp.westus2.azmk8s.io
+DOCKER_PREFIX := hailtest0acr.azurecr.io
+DOCKER_ROOT_IMAGE := hailtest0acr.azurecr.io/ubuntu:18.04
+DOMAIN := azhailtest0.net
+INTERNAL_IP := TODO
+IP := 20.99.131.198
+KUBERNETES_SERVER_URL := https://hailtest0vdc-68b6af7b.hcp.westus2.azmk8s.io
+ADMIN_EMAIL := gregsmi@microsoft.com
 ifeq ($(NAMESPACE),default)
 SCOPE = deploy
 DEPLOY = true

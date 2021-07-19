@@ -154,11 +154,13 @@ create_storage_container() {
 make_tfvars() {
   local deployment_name="$1"
   local resource_group_name="$2"
+  local admin_email="$3"
 
   # Write out new default tfvars file.
   cat << EOF > terraform.tfvars
 deployment_name     = "${deployment_name}"
 resource_group_name = "${resource_group_name}"
+admin_email         = "${admin_email}"
 EOF
 
   echo "Variable file terraform.tfvars created."
@@ -229,7 +231,7 @@ main() {
   terraform init -reconfigure -backend-config="storage_account_name=${STORAGE_ACCOUNT}" -backend-config="container_name=tfstate" -backend-config="access_key=${sa_access_key}" -backend-config="key=hail.tfstate"
 
   # Create/update Terraform variables file.
-  make_tfvars "${DEPLOYMENT_NAME}" "${RESOURCE_GROUP_NAME}"
+  make_tfvars "${DEPLOYMENT_NAME}" "${RESOURCE_GROUP_NAME}" "${ADMIN_EMAIL}"
 }
 
 # Run main.

@@ -23,7 +23,7 @@ run: push
 	echo $(DOMAIN) > domains.txt.out
 	echo internal.$(DOMAIN) >> domains.txt.out
 	sed 's/$$/.$(DOMAIN)/g' subdomains.txt >> domains.txt.out
-	python3 ../ci/jinja2_render.py '{"letsencrypt_image":{"image":"$(LETSENCRYPT_IMAGE)"},"domain":"$(DOMAIN)","domains":"'$$(paste -s -d, domains.txt.out)'","dry_run":$(DRY_RUN)}' letsencrypt-pod.yaml letsencrypt-pod.yaml.out
+	python3 ../ci/jinja2_render.py '{"letsencrypt_image":{"image":"$(LETSENCRYPT_IMAGE)"},"domain":"$(DOMAIN)","domains":"'$$(paste -s -d, domains.txt.out)'","dry_run":$(DRY_RUN),"admin_email":"$(ADMIN_EMAIL)"}' letsencrypt-pod.yaml letsencrypt-pod.yaml.out
 	/bin/bash run-letsencrypt.sh
 
 .PHONY: clean

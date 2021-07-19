@@ -62,8 +62,10 @@ make_configmk() {
   local docker_root_image=$(terraform output -json global_config | jq -r '.docker_root_image // empty')
   local ip=$(terraform output -json global_config | jq -r '.ip // empty')
   local internal_ip=$(terraform output -json global_config | jq -r '.internal_ip // empty')
+  local admin_email=$(terraform output -json global_config | jq -r '.admin_email // empty')
+
   if [ -z "$location" ] || [ -z "$deployment_name" ] || [ -z "$container_registry" ] || 
-     [ -z "$k8s_server_url" ] || [ -z "$docker_root_image" ] || [ -z "$ip" ] || [ -z "$internal_ip" ]; then
+     [ -z "$k8s_server_url" ] || [ -z "$docker_root_image" ] || [ -z "$ip" ] || [ -z "$internal_ip" ] || [ -z "$admin_email" ]; then
     err "Missing Terraform outputs (make sure state is in sync)"
   fi
 
@@ -78,6 +80,7 @@ DOMAIN := az${deployment_name}.net
 INTERNAL_IP := ${internal_ip}
 IP := ${ip}
 KUBERNETES_SERVER_URL := ${k8s_server_url}
+ADMIN_EMAIL := ${admin_email}
 ifeq (\$(NAMESPACE),default)
 SCOPE = deploy
 DEPLOY = true
@@ -149,15 +152,15 @@ main() {
   populate_acr "${CONTAINER_REGISTRY_NAME}"
 
   # Build ci containers and populate container registry.
-  make -C ../../ci push-ci-utils
+  #make -C ../../ci push-ci-utils
   
   # Deploy the bootstrap gateway to enable public incoming letsencrypt routes.
-  make -C ../../bootstrap-gateway deploy
+  #make -C ../../bootstrap-gateway deploy
 
   # Run certbot pod to create SL certs for public microservice endpoints.
   # TODO, the Dockerfile here pulls kubectl from google storage, consider moving.
   # TODO, manually changed $ROOT/letsencrypt/letsencrypt.sh to not have container running certbot send agree-tos cseed@.
-  make -C ../../letsencrypt run
+  #make -C ../../letsencrypt run
 
 }
 

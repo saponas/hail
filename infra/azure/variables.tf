@@ -6,3 +6,8 @@ variable "resource_group_name" {
   type        = string
   description = "Master resource group name."
 }
+
+variable "admin_email" {
+  type        = string
+  description = "Email address for system administrator"
+}

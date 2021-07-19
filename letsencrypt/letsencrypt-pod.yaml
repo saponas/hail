@@ -24,6 +24,8 @@ spec:
         value: {{ domain }}
       - name: "DOMAINS"
         value: {{ domains }}
+      - name: "ADMIN_EMAIL"
+        value: {{ admin_email }}
     ports:
     - containerPort: 80
   restartPolicy: Never
