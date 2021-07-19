@@ -11,7 +11,7 @@ output "k8sname" {
   value = azurerm_kubernetes_cluster.vdc.name
 }
 output "container_registry" {
-  value = azurerm_container_registry.acr.login_server
+  value = azurerm_container_registry.acr.name
 }
 output "kube_config" {
   value     = azurerm_kubernetes_cluster.vdc.kube_config_raw
