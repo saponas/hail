@@ -152,15 +152,15 @@ main() {
   populate_acr "${CONTAINER_REGISTRY_NAME}"
 
   # Build ci containers and populate container registry.
-  #make -C ../../ci push-ci-utils
+  make -C ../../ci push-ci-utils
   
   # Deploy the bootstrap gateway to enable public incoming letsencrypt routes.
-  #make -C ../../bootstrap-gateway deploy
+  make -C ../../bootstrap-gateway deploy
 
   # Run certbot pod to create SL certs for public microservice endpoints.
   # TODO, the Dockerfile here pulls kubectl from google storage, consider moving.
   # TODO, manually changed $ROOT/letsencrypt/letsencrypt.sh to not have container running certbot send agree-tos cseed@.
-  #make -C ../../letsencrypt run
+  make -C ../../letsencrypt run
 
 }
 
