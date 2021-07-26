@@ -44,6 +44,12 @@ resource "azurerm_kubernetes_cluster" "vdc" {
   depends_on = [azurerm_virtual_network.default]
 }
 
+resource "azurerm_role_assignment" "aks_subnet" {
+  scope                = resource.azurerm_subnet.kubesubnet.id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_kubernetes_cluster.vdc.identity[0].principal_id
+}
+
 data "azurerm_resource_group" "node_rg" {
   name = azurerm_kubernetes_cluster.vdc.node_resource_group
 }
