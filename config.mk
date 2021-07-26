@@ -4,9 +4,9 @@ ZONE := westus2
 DOCKER_PREFIX := hailtest0acr.azurecr.io
 DOCKER_ROOT_IMAGE := hailtest0acr.azurecr.io/ubuntu:18.04
 DOMAIN := azhailtest0.net
-INTERNAL_IP := 10.0.240.240
-IP := 20.99.131.198
-KUBERNETES_SERVER_URL := https://hailtest0vdc-68b6af7b.hcp.westus2.azmk8s.io
+INTERNAL_IP := 10.1.63.254
+IP := 20.83.89.39
+KUBERNETES_SERVER_URL := https://hailtest0vdc-17bac1fd.hcp.westus2.azmk8s.io
 ADMIN_EMAIL := gregsmi@microsoft.com
 ifeq ($(NAMESPACE),default)
 SCOPE = deploy

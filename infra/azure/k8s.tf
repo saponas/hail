@@ -30,13 +30,16 @@ resource "azurerm_kubernetes_cluster" "vdc" {
     type = "SystemAssigned"
   }
 
-  #   network_profile {
-  #     network_plugin = "azure"
-  #     service_cidr   = "10.0.0.0/16"
-  #     # Address within the Kubernetes service range for kube-dns
-  #     dns_service_ip     = "10.0.0.10"
-  #     docker_bridge_cidr = "172.17.0.1/16"
-  #   }
+  network_profile {
+    network_plugin = "kubenet"
+    # Address range for pods - each node gets a /24 sub-range
+    pod_cidr = "10.244.0.0/16"
+    # Address range for services
+    service_cidr   = "10.0.0.0/16"
+    # Address within the Kubernetes service range for kube-dns
+    dns_service_ip     = "10.0.0.10"
+    docker_bridge_cidr = "172.17.0.1/16"
+  }
 
   depends_on = [azurerm_virtual_network.default]
 }
@@ -103,7 +106,7 @@ resource "kubernetes_secret" "global_config" {
     gcp_zone              = "TODO"
     docker_prefix         = azurerm_container_registry.acr.login_server
     gsuite_organization   = "TODO"
-    internal_ip           = "TODO"
+    internal_ip           = local.internal_ip
     ip                    = azurerm_public_ip.gateway.ip_address
     kubernetes_server_url = "https://${azurerm_kubernetes_cluster.vdc.fqdn}"
     admin_email           = "${var.admin_email}"

@@ -31,7 +31,7 @@ login_azure() {
   # Check if already logged in by trying to get an access token with the specified tenant.
   2>/dev/null az account get-access-token --tenant "${aad_tenant}" --output none
   if [[ $? -ne 0 ]] ; then
-    echo "Login required to authenticate with Azure."
+    echo "Login required to authenticate with Azure"
     echo "Attempting to login to Tenant: ${aad_tenant}"
     az login --output none --tenant "${aad_tenant}"
     if [[ $? -ne 0 ]]; then
@@ -44,7 +44,7 @@ login_azure() {
   echo "Setting subscription to $sub_name (${az_subscription})."
   az account set --subscription "${az_subscription}"
 
-  echo "Logging in to container registry $az_acr."
+  echo "Logging in to container registry $az_acr"
   az acr login -n "${az_acr}"
 }
 
@@ -90,7 +90,7 @@ DEPLOY = false
 endif
 EOF
 
-  echo "Config.mk file updated."
+  echo "Config.mk file updated"
 }
 
 #######################################
@@ -101,8 +101,14 @@ EOF
 populate_acr() {
   # Import base images to the ACR.
   images=$(cat ../../docker/third-party/images.txt)
+  echo "Importing third-party images to $1."
   for image in ${images}
   do
+    az acr repository show -n $1 --image $image  > /dev/null 2>&1
+    if [ ${?} -eq 0 ]; then
+        echo "${image} already exists - skipped."
+        continue
+    fi
     echo "Pulling image ${image} to $1..."
     if [[ $image =~ "/" ]]; then
       # Keep the specific namespace.
@@ -113,7 +119,42 @@ populate_acr() {
     fi
   done
 }
-  
+
+#######################################
+#  
+# Arguments:
+#   
+#######################################
+generate_internal_certs() {
+  mkdir -p .certs
+  cd .certs
+  echo "Generating new hail-root certificates"
+  openssl req -new -x509 \
+        -subj /CN=hail-root \
+        -nodes \
+        -newkey rsa:4096 \
+        -keyout hail-root-key.pem \
+        -out hail-root-cert.pem \
+        -days 365 \
+        -sha256
+  kubectl create secret generic \
+        -n default ssl-config-hail-root \
+        --from-file=hail-root-key.pem \
+        --from-file=hail-root-cert.pem \
+        --save-config \
+        --dry-run=client \
+        -o yaml \
+    | kubectl apply -f -
+
+  echo "Generating microservice certificates from root"
+  make -C $HAIL/hail python/hailtop/hail_version
+  PYTHONPATH=$HAIL/hail/python \
+        python3 $HAIL/tls/create_certs.py \
+        default \
+        $HAIL/tls/config.yaml \
+        hail-root-key.pem \
+        hail-root-cert.pem
+}
 
 main() {
   # Load variables we need from a .env file if specified. Sourcing it as a script.
@@ -129,6 +170,7 @@ main() {
     err "Missing variable AZURE_SUBSCRIPTION (specify via environment or '.env' file)"
   fi
 
+  local HAIL="$(realpath $(dirname "$0")/../..)"
   local RESOURCE_GROUP_NAME=$(terraform output -raw resource_group)
   local K8S_CLUSTER_NAME=$(terraform output -raw k8sname)
   local CONTAINER_REGISTRY_NAME=$(terraform output -raw container_registry)
@@ -146,22 +188,32 @@ main() {
   az aks get-credentials -g ${RESOURCE_GROUP_NAME} -n "${K8S_CLUSTER_NAME}"
 
   # Create config.mk file for hail build from terraform outputs.
-  make_configmk "../../config.mk"
+  make_configmk "$HAIL/config.mk"
 
-  # Ensure initial container population.
-  populate_acr "${CONTAINER_REGISTRY_NAME}"
+  # # Ensure initial container population.
+  # populate_acr "${CONTAINER_REGISTRY_NAME}"
 
-  # Build ci containers and populate container registry.
-  make -C ../../ci push-ci-utils
+  # # Build ci containers and populate container registry.
+  # make -C $HAIL/ci push-ci-utils
+  # # Create ServiceAccounts and PriorityClasses.
+  # kubectl -n default apply -f ../../ci/bootstrap.yaml
   
-  # Deploy the bootstrap gateway to enable public incoming letsencrypt routes.
-  make -C ../../bootstrap-gateway deploy
+  # # Deploy the bootstrap gateway to enable public incoming letsencrypt routes.
+  # make -C $HAIL/bootstrap-gateway deploy
 
-  # Run certbot pod to create SL certs for public microservice endpoints.
-  # TODO, the Dockerfile here pulls kubectl from google storage, consider moving.
-  # TODO, manually changed $ROOT/letsencrypt/letsencrypt.sh to not have container running certbot send agree-tos cseed@.
-  make -C ../../letsencrypt run
+  # # Run certbot pod to create SSL certs for public microservice endpoints.
+  # # TODO, the Dockerfile here pulls kubectl from google storage, consider moving.
+  # # TODO, manually changed $ROOT/letsencrypt/letsencrypt.sh to not have container running certbot send agree-tos cseed@.
+  # make -C $HAIL/letsencrypt run
 
+  # # Generate internally trusted SSL certs for intra-cluster service traffic.
+  # generate_internal_certs
+
+  # # Redeploy external gateway with newly-created certs.
+  # make -C $HAIL/gateway deploy
+
+  # Deploy internal gateway with self-signed certs.
+  # make -C $HAIL/internal-gateway deploy
 }
 
 # Run main.

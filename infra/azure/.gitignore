@@ -1,4 +1,4 @@
 .ssh/
+.certs/
 .terraform*
 out.plan
-certs
