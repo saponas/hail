@@ -35,7 +35,7 @@ resource "azurerm_kubernetes_cluster" "vdc" {
     # Address range for pods - each node gets a /24 sub-range
     pod_cidr = "10.244.0.0/16"
     # Address range for services
-    service_cidr   = "10.0.0.0/16"
+    service_cidr = "10.0.0.0/16"
     # Address within the Kubernetes service range for kube-dns
     dns_service_ip     = "10.0.0.10"
     docker_bridge_cidr = "172.17.0.1/16"
@@ -116,6 +116,30 @@ resource "kubernetes_secret" "global_config" {
     ip                    = azurerm_public_ip.gateway.ip_address
     kubernetes_server_url = "https://${azurerm_kubernetes_cluster.vdc.fqdn}"
     admin_email           = "${var.admin_email}"
+  }
+}
+
+resource "kubernetes_secret" "deploy_config" {
+  metadata {
+    name = "deploy-config"
+  }
+
+  data = {
+    "deploy-config.json" = "{\"location\":\"k8s\",\"default_namespace\":\"default\",\"domain\":\"${local.domain}\"}"
+  }
+}
+
+resource "random_id" "fernet_key" {
+  byte_length = 32
+}
+
+resource "kubernetes_secret" "session_secret_key" {
+  metadata {
+    name = "session-secret-key"
+  }
+
+  binary_data = {
+    "session-secret-key" = "${random_id.fernet_key.b64_std}"
   }
 }
 

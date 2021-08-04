@@ -56,6 +56,7 @@ login_azure() {
 make_configmk() {
   local cfg_path="$1"
   local location=$(terraform output -raw location)
+  local domain=$(terraform output -raw domain)
   local deployment_name=$(terraform output -raw deployment_name)
   local container_registry=$(terraform output -raw container_registry)
   local k8s_server_url=$(terraform output -json global_config | jq -r '.kubernetes_server_url // empty')
@@ -76,7 +77,7 @@ REGION := ${location}
 ZONE := ${location}
 DOCKER_PREFIX := ${container_registry}.azurecr.io
 DOCKER_ROOT_IMAGE := ${docker_root_image}
-DOMAIN := az${deployment_name}.net
+DOMAIN := ${domain}
 INTERNAL_IP := ${internal_ip}
 IP := ${ip}
 KUBERNETES_SERVER_URL := ${k8s_server_url}
@@ -214,6 +215,9 @@ main() {
 
   # Deploy internal gateway with self-signed certs.
   # make -C $HAIL/internal-gateway deploy
+
+  # Build and deploy website microservice
+  # make -C $HAIL/website deploy NAMESPACE=default
 }
 
 # Run main.

@@ -6,7 +6,7 @@ terraform {
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "1.13.3"
+      version = "2.2.0"
     }
   }
 }
@@ -26,9 +26,8 @@ provider "azurerm" {
 
 # Configure the Kubernetes provider
 provider "kubernetes" {
-  load_config_file = false
-
   host = "https://${azurerm_kubernetes_cluster.vdc.fqdn}"
+
   cluster_ca_certificate = base64decode(
     azurerm_kubernetes_cluster.vdc.kube_config[0].cluster_ca_certificate
   )

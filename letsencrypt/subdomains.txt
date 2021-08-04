@@ -12,3 +12,4 @@ workshop
 atgu
 grafana
 prometheus
+www

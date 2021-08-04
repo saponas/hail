@@ -21,7 +21,9 @@ output "global_config" {
   value     = kubernetes_secret.global_config.data
   sensitive = true
 }
-
+output "domain" {
+  value = local.domain
+}
 # output "client_key" {
 #   value = azurerm_kubernetes_cluster.vdc.kube_config.0.client_key
 # }

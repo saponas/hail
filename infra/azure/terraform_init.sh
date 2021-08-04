@@ -228,7 +228,7 @@ main() {
   fi
   # TODO, might need a check to verify the storage account and container are up and running at this point, script has failed once when needing to create the container, with a ContainerNotFound error message.
   # Configure Terraform backend (azurerm) to use Azure blob container to store state. This configuration is persisted in local tfstate.
-  terraform init -reconfigure -backend-config="storage_account_name=${STORAGE_ACCOUNT}" -backend-config="container_name=tfstate" -backend-config="access_key=${sa_access_key}" -backend-config="key=hail.tfstate"
+  terraform init -reconfigure -upgrade -backend-config="storage_account_name=${STORAGE_ACCOUNT}" -backend-config="container_name=tfstate" -backend-config="access_key=${sa_access_key}" -backend-config="key=hail.tfstate"
 
   # Create/update Terraform variables file.
   make_tfvars "${DEPLOYMENT_NAME}" "${RESOURCE_GROUP_NAME}" "${ADMIN_EMAIL}"
