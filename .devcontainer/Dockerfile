@@ -37,14 +37,18 @@ RUN sudo apt-get update && sudo apt-get install -y apt-transport-https gnupg2
 RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 RUN echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee -a /etc/apt/sources.list.d/kubernetes.list
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -y install --no-install-recommends docker.io python3-pip openjdk-8-jre-headless jq kubectl azure-cli wget unzip build-essential
+    && apt-get -y install --no-install-recommends docker.io python3-pip openjdk-8-jre-headless jq kubectl azure-cli wget unzip build-essential pandoc
 
 RUN wget https://releases.hashicorp.com/terraform/0.15.4/terraform_0.15.4_linux_amd64.zip
 RUN unzip terraform_0.15.4_linux_amd64.zip
 RUN sudo mv terraform /usr/local/bin/
 
 # Install pip packages
-COPY docker/requirements.txt /tmp/scripts/requirements.txt
+COPY docker/requirements.txt /tmp/scripts/docker_requirements.txt
+COPY hail/python/requirements.txt /tmp/scripts/hail_requirements.txt
 WORKDIR /tmp/scripts/
-RUN python3 -m pip install -r requirements.txt
+RUN python3 -m pip install -r docker_requirements.txt
+RUN python3 -m pip install -r hail_requirements.txt
 
+# Set the PYTHONPATH environment variable
+ENV PYTHONPATH=/workspaces/hail/hail/python
