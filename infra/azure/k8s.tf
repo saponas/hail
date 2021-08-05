@@ -161,3 +161,52 @@ resource "azurerm_role_assignment" "acr_push" {
   role_definition_name = "AcrPush"
   principal_id         = azurerm_kubernetes_cluster.vdc.kubelet_identity[0].object_id
 }
+
+resource "random_password" "db_root_password" {
+  length = 22
+}
+
+resource "azurerm_mysql_server" "db_server" {
+  name                = "${var.deployment_name}dbserver"
+  location            = data.azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
+
+  administrator_login          = "dbroot"
+  administrator_login_password = random_password.db_root_password.result
+
+  # below lifted from manual deployment, TODO, maybe incorrect or not needed.
+  sku_name   = "GP_Gen5_2"
+  storage_mb = 5120
+  version    = "5.7"
+
+  auto_grow_enabled                 = true
+  backup_retention_days             = 7
+  geo_redundant_backup_enabled      = false
+  infrastructure_encryption_enabled = false
+  public_network_access_enabled     = false
+  ssl_enforcement_enabled           = true
+  ssl_minimal_tls_version_enforced  = "TLSEnforcementDisabled"
+}
+
+resource "azurerm_mysql_database" "db" {
+  name                = "haildb"
+  resource_group_name = data.azurerm_resource_group.rg.name
+  server_name         = azurerm_mysql_server.db_server.name
+  # below from example, TODO, maybe incorrect or not needed.
+  charset             = "utf8"
+  collation           = "utf8_unicode_ci"
+}
+
+#resource "azurerm_mysql_virtual_network_rule" "db_vnet_rule" {
+#  name                = "mysql-vnet-rule"
+#  resource_group_name = data.azurerm_resource_group.rg.name
+#  server_name         = azurerm_mysql_server.db_server.name
+#  subnet_id           = azurerm_subnet.kubesubnet.id
+#}
+
+# Note, SSL/TLS connectivity in Azure Database for MySQL currently only allows use of a predefined 
+# certificate to connect to a DB. See https://docs.microsoft.com/en-us/azure/mysql/concepts-ssl-connection-security
+
+data "http" "mysql_ca_cert" {
+  url = "https://www.digicert.com/CACerts/BaltimoreCyberTrustRoot.crt.pem"
+}
