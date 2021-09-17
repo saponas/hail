@@ -9,7 +9,8 @@ resource "azurerm_subnet" "kubesubnet" {
   name                 = "kubesubnet"
   resource_group_name  = data.azurerm_resource_group.rg.name
   virtual_network_name = azurerm_virtual_network.default.name
-  address_prefixes     = ["10.1.60.0/22"] # supports 1022 nodes
+  address_prefixes     = ["10.1.60.0/22"]  # supports 1022 nodes
+  service_endpoints    = ["Microsoft.Sql"] # Enable service endpoint to MySQL
 }
 
 resource "azurerm_public_ip" "gateway" {
@@ -18,6 +19,11 @@ resource "azurerm_public_ip" "gateway" {
   resource_group_name = data.azurerm_resource_group.node_rg.name
   allocation_method   = "Static"
   sku                 = "Standard"
+  
+  # Seems to be a new TF bug forcing replacement despite no change...
+  lifecycle {
+    ignore_changes  = ["location", ]
+  }
 }
 
 locals {
