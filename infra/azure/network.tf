@@ -19,11 +19,11 @@ resource "azurerm_public_ip" "gateway" {
   resource_group_name = data.azurerm_resource_group.node_rg.name
   allocation_method   = "Static"
   sku                 = "Standard"
-  
+
   # Seems to be a new TF bug forcing replacement despite no change...
-  lifecycle {
-    ignore_changes  = ["location", ]
-  }
+  # lifecycle {
+  #   ignore_changes  = [location]
+  # }
 }
 
 locals {

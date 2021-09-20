@@ -316,7 +316,8 @@ time chroot /python3.7-slim-stretch /usr/local/bin/python3 \
 mv /python3.7-slim-stretch/Dockerfile.out {shq(dockerfile_in_context)}
 
 set +e
-/busybox/sh /convert-google-application-credentials-to-kaniko-auth-config
+#/busybox/sh /convert-google-application-credentials-to-kaniko-auth-config
+cp --no-target-directory /secrets/gcr-push-service-account-key/gcr-push-service-account-key.json /kaniko/.docker/config.json
 set -e
 
 exec /kaniko/executor --dockerfile={shq(dockerfile_in_context)} --context=dir://{shq(context)} --destination={shq(self.image)} --cache=true --cache-repo={shq(cache_repo)} --snapshotMode=redo --use-new-run'''

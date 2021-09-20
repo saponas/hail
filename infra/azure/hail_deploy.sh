@@ -189,7 +189,7 @@ main() {
   az aks get-credentials -g ${RESOURCE_GROUP_NAME} -n "${K8S_CLUSTER_NAME}"
 
   # Create config.mk file for hail build from terraform outputs.
-  make_configmk "$HAIL/config.mk"
+  # make_configmk "$HAIL/config.mk"
 
   # # Ensure initial container population.
   # populate_acr "${CONTAINER_REGISTRY_NAME}"

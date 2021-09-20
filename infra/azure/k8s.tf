@@ -149,6 +149,8 @@ resource "azurerm_container_registry" "acr" {
   resource_group_name = data.azurerm_resource_group.rg.name
   location            = data.azurerm_resource_group.rg.location
   sku                 = "Premium"
+  # Need a username/password for kaniko config.json.
+  admin_enabled       = true
 }
 
 resource "azurerm_role_assignment" "acr_pull" {
@@ -161,4 +163,19 @@ resource "azurerm_role_assignment" "acr_push" {
   scope                = azurerm_container_registry.acr.id
   role_definition_name = "AcrPush"
   principal_id         = azurerm_kubernetes_cluster.vdc.kubelet_identity[0].object_id
+}
+
+# This secret is integral to the CI/CD process as kaniko is used for all image 
+# building and needs permissions to push to the private registry. With a GCP setup 
+# this secret is a service account key translated to a kaniko config before kaniko
+# exec; In the Azure setup the secret is already in kaniko's config.json format and
+# is simply copied over.
+resource "kubernetes_secret" "acr_push_config" {
+  metadata {
+    name = "gcr-push-service-account-key"
+  }
+
+  data = {
+    "gcr-push-service-account-key.json" = "{\"auths\":{\"${azurerm_container_registry.acr.name}.azurecr.io\":{\"username\":\"${azurerm_container_registry.acr.admin_username}\",\"password\":\"${azurerm_container_registry.acr.admin_password}\"}}}"
+  }
 }

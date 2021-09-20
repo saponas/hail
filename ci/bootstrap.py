@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 import os
 import json
 from shlex import quote as shq
@@ -41,7 +41,7 @@ class LocalJob:
         secrets: Optional[List[Dict[str, str]]] = None,
         service_account: Optional[str] = None,
         attributes: Optional[Dict[str, str]] = None,
-        parents: Optional[List[LocalJob]] = None,
+        parents: Optional[List['LocalJob']] = None,
         input_files: Optional[List[Tuple[str, str]]] = None,
         output_files: Optional[List[Tuple[str, str]]] = None,
         **kwargs,
@@ -106,6 +106,7 @@ class LocalBatchBuilder:
 
         prefix = f'gs://dummy/build/{batch_token}'
 
+        print(f'jobs: {[j._attributes.get("name") for j in self._jobs]}')
         for j in self._jobs:
             job_name = j._attributes.get('name')
 
@@ -159,7 +160,7 @@ class LocalBatchBuilder:
 
                 env_options = []
                 if j._env:
-                    for key, value in j._env:
+                    for key, value in j._env.items():
                         env_options.extend(['-e', f'{key}={value}'])
 
                 # Reboot the cache on each use.  The kube client isn't
@@ -287,6 +288,9 @@ class Branch(Code):
 
     def repo_url(self) -> str:
         return f'https://github.com/{self._owner}/{self._repo}'
+
+    def repo_dir(self):
+        return f'repos/{self._repo.short_str()}'
 
     def config(self) -> Dict[str, str]:
         config = {
